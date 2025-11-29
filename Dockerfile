@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install system dependencies for oracledb
 RUN apt-get update && apt-get install -y \
-    libaio1 \
+    libaio1t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for caching
