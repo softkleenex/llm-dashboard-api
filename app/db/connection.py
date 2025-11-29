@@ -10,13 +10,16 @@ pool = None
 
 
 def init_pool():
-    """Initialize Oracle connection pool"""
+    """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
     global pool
     if pool is None:
         pool = oracledb.create_pool(
             user=settings.db_user,
             password=settings.db_password,
             dsn=settings.dsn,
+            config_dir=settings.wallet_location,
+            wallet_location=settings.wallet_location,
+            wallet_password=settings.db_wallet_password,
             min=2,
             max=10,
             increment=1,
