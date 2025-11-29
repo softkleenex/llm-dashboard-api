@@ -44,3 +44,41 @@ class UserResponse(UserBase):
 
 class UserWithDepartment(UserResponse):
     department_name: Optional[str] = None
+
+
+# 통계 쿼리용 스키마
+class UserByRole(BaseModel):
+    """Q11: 특정 역할 사용자 조회 결과"""
+    user_id: str
+    user_name: str
+    user_email: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserBasic(BaseModel):
+    """Q14, Q15: 기본 사용자 정보"""
+    user_id: str
+    user_name: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserWithSessionCount(BaseModel):
+    """Q17: 세션 수 포함 사용자"""
+    user_id: str
+    user_name: str
+    session_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class UserIdOnly(BaseModel):
+    """Q20: 사용자 ID만"""
+    user_id: str
+
+    class Config:
+        from_attributes = True

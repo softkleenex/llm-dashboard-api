@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List
+from fastapi import APIRouter, HTTPException, Query, status
+from typing import List, Optional
 from app.schemas.user import (
     UserCreate,
     UserUpdate,
     UserResponse,
     UserWithDepartment,
+    UserByRole,
+    UserBasic,
+    UserWithSessionCount,
+    UserIdOnly,
 )
 from app.services.user_service import UserService
 
@@ -67,3 +71,44 @@ def delete_user(user_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id '{user_id}' not found",
         )
+
+
+# ========================================
+# 통계/분석 쿼리 (Phase 3 Mainmenu 1)
+# ========================================
+
+
+@router.get("/stats/by-role", response_model=List[UserByRole])
+def get_users_by_role(role: str = Query(..., description="역할 (Admin, Developer, Data Scientist, Researcher, Team Leader)")):
+    """[Q11] 특정 역할 사용자 조회"""
+    return UserService.get_by_role(role)
+
+
+@router.get("/stats/by-department-name", response_model=List[UserBasic])
+def get_users_by_department_name(department_name: str = Query(..., description="부서명")):
+    """[Q14] 특정 부서명으로 유저 조회 (서브쿼리 사용)"""
+    return UserService.get_by_department_name(department_name)
+
+
+@router.get("/stats/with-sessions", response_model=List[UserBasic])
+def get_users_with_sessions(
+    session_status: Optional[str] = Query(None, description="세션 상태 (진행중, 완료, 오류, 중단)")
+):
+    """[Q15] 특정 상태 세션을 보유한 유저 조회 (EXISTS 서브쿼리)"""
+    return UserService.get_users_with_active_sessions(session_status)
+
+
+@router.get("/stats/min-sessions", response_model=List[UserWithSessionCount])
+def get_users_with_min_sessions(
+    min_count: int = Query(5, ge=1, description="최소 세션 수 (기본값: 5)")
+):
+    """[Q17] 최소 세션 수 이상 보유 유저 조회 (인라인 뷰)"""
+    return UserService.get_users_with_min_sessions(min_count)
+
+
+@router.get("/stats/role-and-managers", response_model=List[UserIdOnly])
+def get_role_users_and_managers(
+    role: Optional[str] = Query(None, description="역할 (선택사항)")
+):
+    """[Q20] 특정 역할 유저와 부서 관리자 통합 조회 (UNION)"""
+    return UserService.get_role_users_and_managers(role)

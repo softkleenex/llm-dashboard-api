@@ -5,6 +5,10 @@ from app.schemas.user import (
     UserUpdate,
     UserResponse,
     UserWithDepartment,
+    UserByRole,
+    UserBasic,
+    UserWithSessionCount,
+    UserIdOnly,
 )
 
 
@@ -169,3 +173,125 @@ class UserService:
         with get_cursor() as cursor:
             cursor.execute('DELETE FROM "USER" WHERE user_id = :1', [user_id])
             return cursor.rowcount > 0
+
+    # ========================================
+    # 통계/분석 쿼리 (Phase 3 Mainmenu 1)
+    # ========================================
+
+    @staticmethod
+    def get_by_role(role: str) -> List[UserByRole]:
+        """Q11: 특정 역할 사용자 조회"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, user_name, user_email
+                FROM "USER"
+                WHERE role = :1
+                ORDER BY user_id
+            """,
+                [role],
+            )
+            rows = cursor.fetchall()
+            return [
+                UserByRole(user_id=row[0], user_name=row[1], user_email=row[2])
+                for row in rows
+            ]
+
+    @staticmethod
+    def get_by_department_name(department_name: str) -> List[UserBasic]:
+        """Q14: 특정 부서명으로 유저 조회 (서브쿼리 사용)"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, user_name
+                FROM "USER"
+                WHERE department_id = (
+                    SELECT department_id FROM DEPARTMENT WHERE department_name = :1
+                )
+                ORDER BY user_id
+            """,
+                [department_name],
+            )
+            rows = cursor.fetchall()
+            return [UserBasic(user_id=row[0], user_name=row[1]) for row in rows]
+
+    @staticmethod
+    def get_users_with_active_sessions(session_status: Optional[str] = None) -> List[UserBasic]:
+        """Q15: 특정 상태 세션을 보유한 유저 조회 (EXISTS 서브쿼리)"""
+        with get_cursor() as cursor:
+            if session_status:
+                cursor.execute(
+                    """
+                    SELECT U.user_id, U.user_name
+                    FROM "USER" U
+                    WHERE EXISTS (
+                        SELECT 1 FROM SESSIONS S
+                        WHERE S.user_id = U.user_id
+                        AND S.status = :1
+                    )
+                    ORDER BY U.user_id
+                """,
+                    [session_status],
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT U.user_id, U.user_name
+                    FROM "USER" U
+                    WHERE EXISTS (
+                        SELECT 1 FROM SESSIONS S
+                        WHERE S.user_id = U.user_id
+                    )
+                    ORDER BY U.user_id
+                """
+                )
+            rows = cursor.fetchall()
+            return [UserBasic(user_id=row[0], user_name=row[1]) for row in rows]
+
+    @staticmethod
+    def get_users_with_min_sessions(min_count: int = 5) -> List[UserWithSessionCount]:
+        """Q17: 최소 세션 수 이상 보유 유저 조회 (인라인 뷰)"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT U.user_id, U.user_name, S.session_count
+                FROM (
+                    SELECT user_id, COUNT(*) AS session_count
+                    FROM SESSIONS
+                    GROUP BY user_id
+                ) S, "USER" U
+                WHERE S.user_id = U.user_id
+                AND S.session_count >= :1
+                ORDER BY S.session_count DESC
+            """,
+                [min_count],
+            )
+            rows = cursor.fetchall()
+            return [
+                UserWithSessionCount(user_id=row[0], user_name=row[1], session_count=row[2])
+                for row in rows
+            ]
+
+    @staticmethod
+    def get_role_users_and_managers(role: Optional[str] = None) -> List[UserIdOnly]:
+        """Q20: 특정 역할 유저와 부서 관리자 통합 조회 (UNION)"""
+        with get_cursor() as cursor:
+            if role:
+                cursor.execute(
+                    """
+                    SELECT user_id FROM "USER" WHERE role = :1
+                    UNION
+                    SELECT manager_user_id FROM DEPARTMENT WHERE manager_user_id IS NOT NULL
+                """,
+                    [role],
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT user_id FROM "USER"
+                    UNION
+                    SELECT manager_user_id FROM DEPARTMENT WHERE manager_user_id IS NOT NULL
+                """
+                )
+            rows = cursor.fetchall()
+            return [UserIdOnly(user_id=row[0]) for row in rows]

@@ -76,3 +76,24 @@ class SessionLogResponse(SessionLogBase):
 class SessionLogWithDetails(SessionLogResponse):
     config_name: Optional[str] = None
     deployment_server: Optional[str] = None
+
+
+# 통계 쿼리용 스키마
+class SessionLogByToken(BaseModel):
+    """Q18: 토큰 사용량 순 로그 조회 결과"""
+    session_id: str
+    log_sequence: int
+    user_name: str
+    token_used: int
+
+    class Config:
+        from_attributes = True
+
+
+class UserSessionCount(BaseModel):
+    """Q19: 유저별 세션 수 집계 결과"""
+    user_name: str
+    total_sessions: int
+
+    class Config:
+        from_attributes = True

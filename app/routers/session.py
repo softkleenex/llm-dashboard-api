@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List
+from fastapi import APIRouter, HTTPException, Query, status
+from typing import List, Optional
 from app.schemas.session import (
     SessionWithUser,
     SessionLogWithDetails,
+    SessionLogByToken,
+    UserSessionCount,
 )
 from app.services.session_service import SessionService, SessionLogService
 
@@ -71,3 +73,27 @@ def delete_single_log(session_id: str, log_sequence: int):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Log with session_id '{session_id}' and sequence '{log_sequence}' not found",
         )
+
+
+# ========================================
+# 통계/분석 쿼리 (Phase 3 Mainmenu 5)
+# ========================================
+
+
+@router.get("/stats/logs-by-token", response_model=List[SessionLogByToken])
+def get_logs_by_token_usage(
+    date_from: Optional[str] = Query(None, description="시작일 (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="종료일 (YYYY-MM-DD)"),
+    user_name: Optional[str] = Query(None, description="사용자명"),
+    limit: Optional[int] = Query(None, ge=1, description="조회 개수 제한"),
+):
+    """[Q18] 세션 로그 토큰 사용량 순 조회 (동적 필터)"""
+    return SessionLogService.get_logs_by_token_usage(date_from, date_to, user_name, limit)
+
+
+@router.get("/stats/user-session-count", response_model=List[UserSessionCount])
+def get_user_session_count(
+    limit: Optional[int] = Query(None, ge=1, description="조회 개수 제한 (TopN)"),
+):
+    """[Q19] 유저별 세션 수 집계 및 정렬"""
+    return SessionLogService.get_user_session_count(limit)

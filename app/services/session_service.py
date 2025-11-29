@@ -8,6 +8,8 @@ from app.schemas.session import (
     SessionLogCreate,
     SessionLogResponse,
     SessionLogWithDetails,
+    SessionLogByToken,
+    UserSessionCount,
 )
 
 
@@ -198,3 +200,78 @@ class SessionLogService:
                 [session_id, log_sequence],
             )
             return cursor.rowcount > 0
+
+    # ========================================
+    # 통계/분석 쿼리 (Phase 3 Mainmenu 5)
+    # ========================================
+
+    @staticmethod
+    def get_logs_by_token_usage(
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        user_name: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> List[SessionLogByToken]:
+        """Q18: 세션 로그 토큰 사용량 순 조회 (동적 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT SL.session_id, SL.log_sequence, U.user_name, SL.token_used
+                FROM SESSION_LOGS SL, SESSIONS S, "USER" U
+                WHERE SL.session_id = S.session_id AND S.user_id = U.user_id
+            """
+            params = []
+            param_idx = 1
+
+            if date_from:
+                sql += f" AND SL.request_time >= TO_DATE(:{param_idx}, 'YYYY-MM-DD')"
+                params.append(date_from)
+                param_idx += 1
+
+            if date_to:
+                sql += f" AND SL.request_time <= TO_DATE(:{param_idx}, 'YYYY-MM-DD')"
+                params.append(date_to)
+                param_idx += 1
+
+            if user_name:
+                sql += f" AND U.user_name = :{param_idx}"
+                params.append(user_name)
+                param_idx += 1
+
+            sql += " ORDER BY SL.token_used DESC"
+
+            if limit and limit > 0:
+                sql += f" FETCH FIRST {int(limit)} ROWS ONLY"
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                SessionLogByToken(
+                    session_id=row[0],
+                    log_sequence=row[1],
+                    user_name=row[2],
+                    token_used=row[3],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def get_user_session_count(limit: Optional[int] = None) -> List[UserSessionCount]:
+        """Q19: 유저별 세션 수 집계 및 정렬"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT U.user_name, COUNT(S.session_id) AS total_sessions
+                FROM "USER" U, SESSIONS S
+                WHERE U.user_id = S.user_id
+                GROUP BY U.user_name
+                ORDER BY total_sessions DESC
+            """
+
+            if limit and limit > 0:
+                sql += f" FETCH FIRST {int(limit)} ROWS ONLY"
+
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            return [
+                UserSessionCount(user_name=row[0], total_sessions=row[1])
+                for row in rows
+            ]
