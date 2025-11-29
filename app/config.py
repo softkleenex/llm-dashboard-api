@@ -4,12 +4,12 @@ import os
 
 
 class Settings(BaseSettings):
-    # Database settings - Oracle Cloud
-    db_user: str = "ADMIN"
-    db_password: str = "Softkleenex1217"
-    db_dsn: str = "efobzawy3dyk7m7u_low"
-    db_wallet_dir: str = "/app/wallet"
-    db_wallet_password: str = "Softkleenex1217"
+    # Database settings - Oracle Cloud (values from environment variables)
+    db_user: str = ""  # Set via DB_USER env var
+    db_password: str = ""  # Set via DB_PASSWORD env var
+    db_dsn: str = ""  # Set via DB_DSN env var
+    db_wallet_dir: str = "/app/wallet"  # Default for Cloud Run
+    db_wallet_password: str = ""  # Set via DB_WALLET_PASSWORD env var
 
     # Legacy settings (for backward compatibility)
     db_host: str = "localhost"
