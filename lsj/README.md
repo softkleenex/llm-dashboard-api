@@ -73,7 +73,17 @@
 | 항목 | 값 |
 |------|-----|
 | GitHub | https://github.com/knu-comp322-team8/team8-db-proj-backend |
-| 상태 | ⚠️ Secrets 설정 필요 (GCP_PROJECT_ID, GCP_SA_KEY) |
+| 배포 URL | https://llm-dashboard-api-xo73prplpa-du.a.run.app |
+| API 문서 | https://llm-dashboard-api-xo73prplpa-du.a.run.app/docs |
+| 상태 | ✅ 정상 작동 (Oracle Cloud 연결 완료) |
+
+### Oracle Cloud Database
+| 항목 | 값 |
+|------|-----|
+| 서비스 | Oracle Cloud Free Tier Autonomous DB |
+| 리전 | ap-chuncheon-1 (춘천) |
+| 연결 방식 | Wallet 기반 mTLS |
+| 상태 | ✅ 연결 성공 |
 
 ---
 
@@ -157,4 +167,19 @@ aff4e66 feat: GitHub Actions 배포 방식 변경 (Docker Hub + SSH)
 ---
 
 작성일: 2025-11-29
+최종 수정: 2025-11-29
 작성자: 이상재 (softkleenex)
+
+### 데이터 현황
+| 테이블 | 건수 |
+|--------|------|
+| DEPARTMENT | 10 |
+| USER | 300 |
+| PROJECT | 100 |
+| MODEL | 22 |
+| MODEL_CONFIG | 132 |
+| DATASET | 30 |
+| DEPLOYMENTS | 44 |
+| PROMPT_TEMPLATE | 120 |
+| SESSIONS | 650 |
+| SESSION_LOGS | 4,860 |
