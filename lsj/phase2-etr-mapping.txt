@@ -1,0 +1,260 @@
+# ETR (Entity-to-Relation) Mapping - 상재 담당 부분
+
+## 담당 엔티티: MODEL, MODEL_CONFIG, DEPLOYMENTS, DATASET, PROMPT_TEMPLATE
+
+================================================================================
+## 1. MODEL (LLM 모델)
+================================================================================
+
+### ER Schema
+- **엔티티 타입**: Strong Entity
+- **속성**:
+  * model_id (PK) - 모델 고유 식별자
+  * model_name - 모델명
+  * model_type - 모델 유형
+
+- **관계**:
+  * MODEL_CONFIG와 1:N 관계 (HAS_CONFIG)
+    - 한 모델이 여러 설정을 가질 수 있음
+    - MODEL이 1, MODEL_CONFIG가 N
+  * DEPLOYMENTS와 1:N 관계 (DEPLOYED_AS)
+    - 한 모델이 여러 환경에 배포될 수 있음
+    - MODEL이 1, DEPLOYMENTS가 N
+
+### Relational Schema 매핑
+```sql
+CREATE TABLE MODEL (
+    model_id VARCHAR2(50) PRIMARY KEY,
+    model_name VARCHAR2(200) NOT NULL,
+    model_type VARCHAR2(100) NOT NULL
+);
+```
+
+### 매핑 설명
+1. Strong Entity이므로 독립적인 테이블로 생성
+2. model_id를 Primary Key로 설정
+3. 1:N 관계는 N쪽(MODEL_CONFIG, DEPLOYMENTS)에 Foreign Key로 구현
+4. 모든 속성은 NOT NULL (필수 정보)
+
+================================================================================
+## 2. MODEL_CONFIG (모델 설정)
+================================================================================
+
+### ER Schema
+- **엔티티 타입**: Strong Entity
+- **속성**:
+  * config_id (PK) - 설정 고유 식별자
+  * config_name - 설정명
+  * max_tokens - 최대 토큰 수
+  * temperature - 온도 파라미터
+  * top_p - Top-p 샘플링
+  * top_k - Top-k 샘플링
+  * created_at - 생성 시간
+
+- **관계**:
+  * MODEL과 N:1 관계 (HAS_CONFIG)
+    - 여러 설정이 하나의 모델에 속함
+    - MODEL_CONFIG가 N, MODEL이 1
+  * SESSION_LOGS와 1:N 관계 (APPLIES_CONFIG)
+    - 하나의 설정이 여러 로그에서 사용됨
+
+### Relational Schema 매핑
+```sql
+CREATE TABLE MODEL_CONFIG (
+    config_id VARCHAR2(50) PRIMARY KEY,
+    config_name VARCHAR2(200) NOT NULL,
+    max_tokens NUMBER(10) NOT NULL,
+    temperature NUMBER(3,2) CHECK (temperature BETWEEN 0 AND 2),
+    top_p NUMBER(3,2) CHECK (top_p BETWEEN 0 AND 1),
+    top_k NUMBER(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    model_id VARCHAR2(50) NOT NULL,
+    CONSTRAINT fk_config_model FOREIGN KEY (model_id)
+        REFERENCES MODEL(model_id)
+);
+```
+
+### 매핑 설명
+1. Strong Entity이므로 독립적인 테이블로 생성
+2. config_id를 Primary Key로 설정
+3. N:1 관계 구현: model_id를 Foreign Key로 추가 (NOT NULL)
+4. CHECK 제약조건으로 파라미터 범위 제한
+   - temperature: 0~2 범위
+   - top_p: 0~1 범위
+5. created_at은 DEFAULT로 현재 시간 자동 설정
+
+================================================================================
+## 3. DEPLOYMENTS (배포 환경)
+================================================================================
+
+### ER Schema
+- **엔티티 타입**: Strong Entity
+- **속성**:
+  * deployment_id (PK) - 배포 고유 식별자
+  * server_name - 서버명
+  * gpu_count - GPU 개수
+  * environment - 배포 환경
+  * status - 배포 상태
+
+- **관계**:
+  * MODEL과 N:1 관계 (DEPLOYED_AS)
+    - 여러 배포가 하나의 모델을 기반으로 함
+    - DEPLOYMENTS가 N, MODEL이 1
+    - Total Participation: 모든 배포는 반드시 모델 필요
+  * DATASET과 N:1 관계 (USES_DATA)
+    - 여러 배포가 하나의 데이터셋 사용 가능
+    - Partial Participation: 데이터셋 없이도 배포 가능
+  * SESSION_LOGS와 1:N 관계 (DEPLOYED_IN)
+    - 하나의 배포 환경에서 여러 로그 생성
+
+### Relational Schema 매핑
+```sql
+CREATE TABLE DEPLOYMENTS (
+    deployment_id VARCHAR2(50) PRIMARY KEY,
+    server_name VARCHAR2(200) NOT NULL,
+    gpu_count NUMBER(5) NOT NULL,
+    environment VARCHAR2(50) NOT NULL,
+    status VARCHAR2(50) NOT NULL,
+    model_id VARCHAR2(50) NOT NULL,
+    dataset_id VARCHAR2(50),
+    CONSTRAINT fk_deploy_model FOREIGN KEY (model_id)
+        REFERENCES MODEL(model_id),
+    CONSTRAINT fk_deploy_dataset FOREIGN KEY (dataset_id)
+        REFERENCES DATASET(dataset_id)
+);
+```
+
+### 매핑 설명
+1. Strong Entity이므로 독립적인 테이블로 생성
+2. deployment_id를 Primary Key로 설정
+3. N:1 관계 구현:
+   - model_id: NOT NULL (Total Participation)
+   - dataset_id: NULL 가능 (Partial Participation - 학습 없는 배포 허용)
+4. 두 개의 Foreign Key를 통해 다중 관계 표현
+
+================================================================================
+## 4. DATASET (데이터셋)
+================================================================================
+
+### ER Schema
+- **엔티티 타입**: Strong Entity
+- **속성**:
+  * dataset_id (PK) - 데이터셋 고유 식별자
+  * learning_type - 학습 유형
+  * description - 데이터셋 설명
+  * s3_path - S3 저장 경로
+  * created_at - 생성 시간
+
+- **관계**:
+  * DEPLOYMENTS와 1:N 관계 (USES_DATA)
+    - 하나의 데이터셋이 여러 배포에 사용될 수 있음
+    - DATASET이 1, DEPLOYMENTS가 N
+    - Partial Participation: 데이터셋이 배포에 안 쓰일 수도 있음
+
+### Relational Schema 매핑
+```sql
+CREATE TABLE DATASET (
+    dataset_id VARCHAR2(50) PRIMARY KEY,
+    learning_type VARCHAR2(100) NOT NULL,
+    description CLOB,
+    s3_path VARCHAR2(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+```
+
+### 매핑 설명
+1. Strong Entity이므로 독립적인 테이블로 생성
+2. dataset_id를 Primary Key로 설정
+3. 1:N 관계는 N쪽(DEPLOYMENTS)에 Foreign Key로 구현
+4. description은 CLOB (대용량 텍스트 허용)
+5. created_at은 DEFAULT로 현재 시간 자동 설정
+
+================================================================================
+## 5. PROMPT_TEMPLATE (프롬프트 템플릿)
+================================================================================
+
+### ER Schema
+- **엔티티 타입**: Strong Entity
+- **속성**:
+  * template_id (PK) - 템플릿 고유 식별자
+  * template_name - 템플릿명
+  * prompt_s3_path - 프롬프트 S3 경로
+  * description - 템플릿 설명
+  * task_category - 작업 카테고리
+  * variables - 템플릿 변수
+  * version - 버전
+  * usage_count - 사용 횟수
+  * created_at - 생성 시간
+
+- **관계**:
+  * USER와 N:1 관계 (CREATES_TEPL)
+    - 여러 템플릿이 한 사용자에 의해 생성됨
+    - PROMPT_TEMPLATE이 N, USER가 1
+    - Total Participation: 모든 템플릿은 반드시 생성자 있음
+
+### Relational Schema 매핑
+```sql
+CREATE TABLE PROMPT_TEMPLATE (
+    template_id VARCHAR2(50) PRIMARY KEY,
+    template_name VARCHAR2(200) NOT NULL,
+    prompt_s3_path VARCHAR2(500) NOT NULL,
+    description CLOB,
+    task_category VARCHAR2(100) NOT NULL,
+    variables VARCHAR2(1000),
+    version VARCHAR2(20) NOT NULL,
+    usage_count NUMBER(10) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    creator_user_id VARCHAR2(50) NOT NULL,
+    CONSTRAINT fk_template_user FOREIGN KEY (creator_user_id)
+        REFERENCES "USER"(user_id)
+);
+```
+
+### 매핑 설명
+1. Strong Entity이므로 독립적인 테이블로 생성
+2. template_id를 Primary Key로 설정
+3. N:1 관계 구현: creator_user_id를 Foreign Key로 추가 (NOT NULL)
+4. usage_count는 DEFAULT 0으로 초기화
+5. created_at은 DEFAULT로 현재 시간 자동 설정
+6. description은 CLOB (긴 설명 허용)
+
+================================================================================
+## 관계 간 연결 매핑 요약
+================================================================================
+
+### 내부 관계 (상재 담당 엔티티 간)
+1. **MODEL → MODEL_CONFIG** (1:N, HAS_CONFIG)
+   - MODEL_CONFIG.model_id → MODEL.model_id (FK, NOT NULL)
+
+2. **MODEL → DEPLOYMENTS** (1:N, DEPLOYED_AS)
+   - DEPLOYMENTS.model_id → MODEL.model_id (FK, NOT NULL)
+
+3. **DATASET → DEPLOYMENTS** (1:N, USES_DATA)
+   - DEPLOYMENTS.dataset_id → DATASET.dataset_id (FK, NULL 가능)
+
+### 외부 관계 (다른 팀원 엔티티와 연결)
+4. **USER → PROMPT_TEMPLATE** (1:N, CREATES_TEPL)
+   - PROMPT_TEMPLATE.creator_user_id → USER.user_id (FK, NOT NULL)
+   - 영진님 담당 USER 엔티티와 연결
+
+5. **MODEL_CONFIG → SESSION_LOGS** (1:N, APPLIES_CONFIG)
+   - SESSION_LOGS.config_id → MODEL_CONFIG.config_id (FK, NULL 가능)
+   - 영진님 담당 SESSION_LOGS 엔티티와 연결
+
+6. **DEPLOYMENTS → SESSION_LOGS** (1:N, DEPLOYED_IN)
+   - SESSION_LOGS.deployment_id → DEPLOYMENTS.deployment_id (FK, NOT NULL)
+   - 영진님 담당 SESSION_LOGS 엔티티와 연결
+
+================================================================================
+## ER Schema 수정사항
+================================================================================
+
+### 수정 없음
+- Phase 1에서 작성한 ER Schema를 그대로 Relational Schema로 매핑
+- 모든 엔티티와 관계가 정규화된 형태로 올바르게 매핑됨
+- 데이터 무결성을 위한 제약조건 추가 (CHECK, DEFAULT)
+
+================================================================================
+작성일: 2025-10-13
+작성자: 이상재
+================================================================================
