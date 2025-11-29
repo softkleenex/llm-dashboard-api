@@ -70,5 +70,8 @@ def test_connection() -> bool:
             result = cursor.fetchone()
             return result is not None and result[0] == 1
     except Exception as e:
+        import traceback
         print(f"Database connection failed: {e}")
+        print(f"Settings - DSN: {settings.dsn}, Wallet: {settings.wallet_location}")
+        traceback.print_exc()
         return False

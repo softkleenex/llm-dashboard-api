@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Copy Oracle Cloud wallet (for Autonomous DB connection)
-COPY wallet /app/wallet
+# Ensure wallet directory has correct permissions
+RUN chmod -R 755 /app/wallet
 
 # Expose port
 EXPOSE 8000
