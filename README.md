@@ -130,3 +130,4 @@ GitHub Actions 탭 → Deploy → Run workflow
 | DB_PASSWORD | DB 비밀번호 | comp322 |
 | APP_HOST | 서버 호스트 | 0.0.0.0 |
 | APP_PORT | 서버 포트 | 8000 |
+
