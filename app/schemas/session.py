@@ -19,8 +19,8 @@ class SessionType(str, Enum):
 
 
 class SessionBase(BaseModel):
-    session_type: SessionType
-    status: SessionStatus
+    session_type: str  # Changed from SessionType enum
+    status: str  # Changed from SessionStatus enum
     user_id: str = Field(..., max_length=50)
     project_id: Optional[str] = Field(None, max_length=50)
 
@@ -32,7 +32,7 @@ class SessionCreate(SessionBase):
 
 class SessionUpdate(BaseModel):
     end_time: Optional[datetime] = None
-    status: Optional[SessionStatus] = None
+    status: Optional[str] = None
 
 
 class SessionResponse(SessionBase):
