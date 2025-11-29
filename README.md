@@ -93,23 +93,32 @@ uvicorn app.main:app --reload
 | DELETE | `/api/v1/sessions/{id}/logs` | 세션 로그 전체 삭제 |
 | DELETE | `/api/v1/sessions/{id}/logs/{seq}` | 특정 로그 삭제 |
 
-## 배포
+## 배포 (GitHub Actions + Docker)
 
-### Railway 배포
-1. [Railway](https://railway.app)에 로그인
-2. "New Project" → "Deploy from GitHub repo" 선택
-3. 이 레포지토리 연결
-4. 환경변수 설정:
-   - `DB_HOST`: Oracle DB 호스트
-   - `DB_PORT`: Oracle DB 포트
-   - `DB_SERVICE`: Oracle 서비스명
-   - `DB_USER`: DB 사용자
-   - `DB_PASSWORD`: DB 비밀번호
+### 자동배포 흐름
+1. `main` 브랜치에 push
+2. GitHub Actions가 자동 실행
+3. Docker 이미지 빌드 → Docker Hub에 push
+4. SSH로 서버 접속 → 컨테이너 배포
 
-### GitHub Actions 자동배포
-Repository Secrets에 다음 추가:
-- `RAILWAY_TOKEN`: Railway API 토큰
-- `RAILWAY_SERVICE`: Railway 서비스 ID
+### GitHub Repository Secrets 설정
+Repository → Settings → Secrets and variables → Actions에서 설정:
+
+| Secret | 설명 |
+|--------|------|
+| `DOCKER_HUB_USERNAME` | Docker Hub 사용자명 |
+| `DOCKER_HUB_PASSWORD` | Docker Hub 비밀번호 |
+| `SERVER_HOST` | 배포 서버 IP/호스트 |
+| `SERVER_USERNAME` | 서버 SSH 사용자명 |
+| `SERVER_KEY` | 서버 SSH 개인키 |
+| `DB_HOST` | Oracle DB 호스트 |
+| `DB_PORT` | Oracle DB 포트 |
+| `DB_SERVICE` | Oracle 서비스명 |
+| `DB_USER` | DB 사용자 |
+| `DB_PASSWORD` | DB 비밀번호 |
+
+### 수동 배포 트리거
+GitHub Actions 탭 → Deploy → Run workflow
 
 ## 환경변수
 | 변수명 | 설명 | 기본값 |
