@@ -65,7 +65,12 @@ def get_role_users_and_managers(
 @router.get("/", response_model=List[UserWithDepartment])
 def get_all_users():
     """모든 사용자 조회"""
-    return UserService.get_all()
+    try:
+        return UserService.get_all()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/department/{department_id}", response_model=List[UserWithDepartment])
