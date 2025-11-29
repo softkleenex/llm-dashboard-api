@@ -33,10 +33,14 @@ class UserUpdate(BaseModel):
     department_id: Optional[str] = Field(None, max_length=50)
 
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     user_id: str
+    user_name: str
+    user_email: str
+    role: str  # Changed from UserRole enum to str for flexibility
     is_active: str = "Y"
     last_login: Optional[datetime] = None
+    department_id: str
 
     class Config:
         from_attributes = True
