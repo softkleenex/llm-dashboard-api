@@ -5,11 +5,29 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    ADMIN = "Admin"
-    DEVELOPER = "Developer"
+    BUSINESS_ANALYST = "Business Analyst"
+    CUSTOMER_SUCCESS = "Customer Success"
+    DATA_ANALYST = "Data Analyst"
     DATA_SCIENTIST = "Data Scientist"
-    RESEARCHER = "Researcher"
+    DEVOPS_ENGINEER = "DevOps Engineer"
+    ENGINEER = "Engineer"
+    FINANCE_ANALYST = "Finance Analyst"
+    HR_SPECIALIST = "HR Specialist"
+    INTERN = "Intern"
+    ML_ENGINEER = "ML Engineer"
+    MLOPS_ENGINEER = "MLOps Engineer"
+    OPERATIONS_MANAGER = "Operations Manager"
+    PRODUCT_MANAGER = "Product Manager"
+    QA_ENGINEER = "QA Engineer"
+    QUALITY_ANALYST = "Quality Analyst"
+    RESEARCH_SCIENTIST = "Research Scientist"
+    SRE = "SRE"
+    SECURITY_ANALYST = "Security Analyst"
+    SECURITY_ENGINEER = "Security Engineer"
+    SENIOR_ENGINEER = "Senior Engineer"
+    SUPPORT_SPECIALIST = "Support Specialist"
     TEAM_LEADER = "Team Leader"
+    UX_DESIGNER = "UX Designer"
 
 
 class UserBase(BaseModel):

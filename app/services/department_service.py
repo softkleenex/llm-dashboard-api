@@ -54,6 +54,29 @@ class DepartmentService:
             return None
 
     @staticmethod
+    def get_by_name(department_name: str) -> Optional[DepartmentWithManager]:
+        """부서 이름으로 조회"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT d.department_id, d.department_name, d.manager_user_id, u.user_name
+                FROM DEPARTMENT d
+                LEFT JOIN "USER" u ON d.manager_user_id = u.user_id
+                WHERE d.department_name = :1
+            """,
+                [department_name],
+            )
+            row = cursor.fetchone()
+            if row:
+                return DepartmentWithManager(
+                    department_id=row[0],
+                    department_name=row[1],
+                    manager_user_id=row[2],
+                    manager_name=row[3],
+                )
+            return None
+
+    @staticmethod
     def create(department: DepartmentCreate) -> DepartmentResponse:
         """부서 추가"""
         with get_cursor() as cursor:

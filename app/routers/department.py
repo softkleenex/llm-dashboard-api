@@ -29,6 +29,18 @@ def get_department(department_id: str):
     return department
 
 
+@router.get("/by-name/{department_name}", response_model=DepartmentWithManager)
+def get_department_by_name(department_name: str):
+    """부서 이름으로 조회"""
+    department = DepartmentService.get_by_name(department_name)
+    if not department:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Department with name '{department_name}' not found",
+        )
+    return department
+
+
 @router.post("/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
 def create_department(department: DepartmentCreate):
     """부서 추가"""
