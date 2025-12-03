@@ -39,13 +39,11 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     user_id: str = Field(..., max_length=50)
-    password: str = Field(..., max_length=100)
 
 
 class UserUpdate(BaseModel):
     user_name: Optional[str] = Field(None, max_length=100)
     user_email: Optional[str] = Field(None, max_length=200)
-    password: Optional[str] = Field(None, max_length=100)
     role: Optional[UserRole] = None
     is_active: Optional[str] = Field(None, pattern="^[YN]$")
     department_id: Optional[str] = Field(None, max_length=50)

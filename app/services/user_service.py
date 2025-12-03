@@ -103,14 +103,13 @@ class UserService:
         with get_cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO "USER" (user_id, user_name, user_email, password, role, is_active, department_id)
-                VALUES (:1, :2, :3, :4, :5, 'Y', :6)
+                INSERT INTO "USER" (user_id, user_name, user_email, role, is_active, department_id)
+                VALUES (:1, :2, :3, :4, 'Y', :5)
             """,
                 [
                     user.user_id,
                     user.user_name,
                     user.user_email,
-                    user.password,
                     user.role.value,
                     user.department_id,
                 ],
@@ -132,7 +131,7 @@ class UserService:
             # 현재 데이터 조회
             cursor.execute(
                 """
-                SELECT user_name, user_email, password, role, is_active, last_login, department_id
+                SELECT user_name, user_email, role, is_active, last_login, department_id
                 FROM "USER" WHERE user_id = :1
             """,
                 [user_id],
@@ -143,19 +142,18 @@ class UserService:
 
             new_name = user.user_name if user.user_name else row[0]
             new_email = user.user_email if user.user_email else row[1]
-            new_password = user.password if user.password else row[2]
-            new_role = user.role.value if user.role else row[3]
-            new_active = user.is_active if user.is_active else row[4]
-            new_dept = user.department_id if user.department_id else row[6]
+            new_role = user.role.value if user.role else row[2]
+            new_active = user.is_active if user.is_active else row[3]
+            new_dept = user.department_id if user.department_id else row[5]
 
             cursor.execute(
                 """
                 UPDATE "USER"
-                SET user_name = :1, user_email = :2, password = :3,
-                    role = :4, is_active = :5, department_id = :6
-                WHERE user_id = :7
+                SET user_name = :1, user_email = :2,
+                    role = :3, is_active = :4, department_id = :5
+                WHERE user_id = :6
             """,
-                [new_name, new_email, new_password, new_role, new_active, new_dept, user_id],
+                [new_name, new_email, new_role, new_active, new_dept, user_id],
             )
             return UserResponse(
                 user_id=user_id,
@@ -163,7 +161,7 @@ class UserService:
                 user_email=new_email,
                 role=new_role,
                 is_active=new_active,
-                last_login=row[5],
+                last_login=row[4],
                 department_id=new_dept,
             )
 
