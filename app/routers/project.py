@@ -21,6 +21,22 @@ def get_all_projects():
     return ProjectService.get_all()
 
 
+@router.get("/search", response_model=List[ProjectResponse])
+def search_projects(
+    department_name: Optional[str] = Query(
+        None, description="부서명 (부분 일치, 대소문자 무시)"
+    ),
+    project_name: Optional[str] = Query(
+        None, description="프로젝트명 (부분 일치, 대소문자 무시)"
+    ),
+    creator_user_name: Optional[str] = Query(
+        None, description="생성자명 (부분 일치, 대소문자 무시)"
+    ),
+):
+    """프로젝트 검색: 부서명, 프로젝트명, 생성자명으로 필터링"""
+    return ProjectService.search(department_name, project_name, creator_user_name)
+
+
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(project_id: str):
     """프로젝트 ID로 조회"""

@@ -128,6 +128,56 @@ class ProjectService:
             ]
 
     @staticmethod
+    def search(
+        department_name: Optional[str] = None,
+        project_name: Optional[str] = None,
+        creator_user_name: Optional[str] = None,
+    ) -> List[ProjectResponse]:
+        """부서명, 프로젝트명, 생성자명으로 프로젝트 검색 (자연어 검색)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT P.project_id, P.project_name, P.description,
+                       P.created_at, P.creator_user_id, P.department_id
+                FROM PROJECT P
+                LEFT JOIN DEPARTMENT D ON P.department_id = D.department_id
+                LEFT JOIN "USER" U ON P.creator_user_id = U.user_id
+                WHERE 1=1
+            """
+            params: list = []
+            param_idx = 1
+
+            if department_name:
+                sql += f" AND LOWER(D.department_name) LIKE :{param_idx}"
+                params.append(f"%{department_name.lower()}%")
+                param_idx += 1
+
+            if project_name:
+                sql += f" AND LOWER(P.project_name) LIKE :{param_idx}"
+                params.append(f"%{project_name.lower()}%")
+                param_idx += 1
+
+            if creator_user_name:
+                sql += f" AND LOWER(U.user_name) LIKE :{param_idx}"
+                params.append(f"%{creator_user_name.lower()}%")
+                param_idx += 1
+
+            sql += " ORDER BY P.project_id"
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                ProjectResponse(
+                    project_id=row[0],
+                    project_name=row[1],
+                    description=ProjectService._read_lob(row[2]),
+                    created_at=row[3],
+                    creator_user_id=row[4],
+                    department_id=row[5],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
     def create(project: ProjectCreate) -> ProjectResponse:
         """프로젝트 추가"""
         with get_cursor() as cursor:
