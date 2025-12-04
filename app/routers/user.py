@@ -9,7 +9,9 @@ from app.schemas.user import (
     UserBasic,
     UserWithSessionCount,
     UserIdOnly,
+    UserRole,
 )
+from app.schemas.session import SessionStatus
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["사용자 관리"])
@@ -35,7 +37,9 @@ def get_users_by_department_name(department_name: str = Query(..., description="
 
 @router.get("/stats/with-sessions", response_model=List[UserBasic])
 def get_users_with_sessions(
-    session_status: Optional[str] = Query(None, description="세션 상태 (진행중, 완료, 오류, 중단)")
+    session_status: Optional[SessionStatus] = Query(
+        None, description="세션 상태 (진행중, 완료, 오류, 중단)"
+    )
 ):
     """[Q15] 특정 상태 세션을 보유한 유저 조회 (EXISTS 서브쿼리)"""
     return UserService.get_users_with_active_sessions(session_status)
@@ -63,10 +67,14 @@ def get_role_users_and_managers(
 
 
 @router.get("/", response_model=List[UserWithDepartment])
-def get_all_users():
-    """모든 사용자 조회"""
+def get_all_users(
+    user_name: Optional[str] = Query(None, description="유저 이름 (정확히 일치)"),
+    role: Optional[UserRole] = Query(None, description="역할 필터"),
+):
+    """모든 사용자 조회 (유저 이름 및 역할 필터링 가능)"""
     try:
-        return UserService.get_all()
+        role_str = role.value if role else None
+        return UserService.get_all(user_name, role_str)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -74,9 +82,14 @@ def get_all_users():
 
 
 @router.get("/department/{department_id}", response_model=List[UserWithDepartment])
-def get_users_by_department(department_id: str):
-    """부서별 사용자 목록 조회"""
-    return UserService.get_by_department(department_id)
+def get_users_by_department(
+    department_id: str,
+    user_name: Optional[str] = Query(None, description="유저 이름 (정확히 일치)"),
+    role: Optional[UserRole] = Query(None, description="역할 필터"),
+):
+    """부서별 사용자 목록 조회 (유저 이름 및 역할 필터링 가능)"""
+    role_str = role.value if role else None
+    return UserService.get_by_department(department_id, user_name, role_str)
 
 
 @router.get("/{user_id}", response_model=UserWithDepartment)

@@ -107,7 +107,11 @@ class DepartmentService:
                 return None
 
             new_name = department.department_name if department.department_name else row[0]
-            new_manager = department.manager_user_id if department.manager_user_id is not None else row[1]
+            # manager_user_id가 요청에 없거나 빈 문자열이면 기존 값 유지
+            if department.manager_user_id in (None, ""):
+                new_manager = row[1]
+            else:
+                new_manager = department.manager_user_id
 
             cursor.execute(
                 """

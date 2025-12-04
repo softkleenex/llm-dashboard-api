@@ -10,6 +10,8 @@ from app.schemas.session import (
     SessionLogWithDetails,
     SessionLogByToken,
     UserSessionCount,
+    SessionType,
+    SessionStatus,
 )
 
 
@@ -32,8 +34,8 @@ class SessionService:
                     session_id=row[0],
                     start_time=row[1],
                     end_time=row[2],
-                    session_type=row[3],
-                    status=row[4],
+                    session_type=SessionType(row[3]),
+                    status=SessionStatus(row[4]),
                     user_id=row[5],
                     project_id=row[6],
                     user_name=row[7],
@@ -63,8 +65,8 @@ class SessionService:
                     session_id=row[0],
                     start_time=row[1],
                     end_time=row[2],
-                    session_type=row[3],
-                    status=row[4],
+                    session_type=SessionType(row[3]),
+                    status=SessionStatus(row[4]),
                     user_id=row[5],
                     project_id=row[6],
                     user_name=row[7],
@@ -94,8 +96,8 @@ class SessionService:
                     session_id=row[0],
                     start_time=row[1],
                     end_time=row[2],
-                    session_type=row[3],
-                    status=row[4],
+                    session_type=SessionType(row[3]),
+                    status=SessionStatus(row[4]),
                     user_id=row[5],
                     project_id=row[6],
                     user_name=row[7],
@@ -126,8 +128,68 @@ class SessionService:
                     session_id=row[0],
                     start_time=row[1],
                     end_time=row[2],
-                    session_type=row[3],
-                    status=row[4],
+                    session_type=SessionType(row[3]),
+                    status=SessionStatus(row[4]),
+                    user_id=row[5],
+                    project_id=row[6],
+                    user_name=row[7],
+                    project_name=row[8],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def search(
+        user_name: Optional[str] = None,
+        project_name: Optional[str] = None,
+        session_type: Optional[SessionType] = None,
+        status: Optional[SessionStatus] = None,
+    ) -> List[SessionWithUser]:
+        """사용자명, 프로젝트명, 세션 타입, 상태로 세션 검색 (자연어 + Enum 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT s.session_id, s.start_time, s.end_time, s.session_type,
+                       s.status, s.user_id, s.project_id, u.user_name, p.project_name
+                FROM SESSIONS s
+                LEFT JOIN "USER" u ON s.user_id = u.user_id
+                LEFT JOIN PROJECT p ON s.project_id = p.project_id
+                WHERE 1=1
+            """
+            params: list = []
+            param_idx = 1
+
+            if user_name:
+                # 부분 일치(자연어) 검색
+                sql += f" AND LOWER(u.user_name) LIKE :{param_idx}"
+                params.append(f"%{user_name.lower()}%")
+                param_idx += 1
+
+            if project_name:
+                sql += f" AND LOWER(p.project_name) LIKE :{param_idx}"
+                params.append(f"%{project_name.lower()}%")
+                param_idx += 1
+
+            if session_type:
+                sql += f" AND s.session_type = :{param_idx}"
+                params.append(session_type.value)
+                param_idx += 1
+
+            if status:
+                sql += f" AND s.status = :{param_idx}"
+                params.append(status.value)
+                param_idx += 1
+
+            sql += " ORDER BY s.start_time DESC"
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                SessionWithUser(
+                    session_id=row[0],
+                    start_time=row[1],
+                    end_time=row[2],
+                    session_type=SessionType(row[3]),
+                    status=SessionStatus(row[4]),
                     user_id=row[5],
                     project_id=row[6],
                     user_name=row[7],

@@ -12,15 +12,15 @@ class SessionStatus(str, Enum):
 
 
 class SessionType(str, Enum):
-    CHAT = "Chat"
-    COMPLETION = "Completion"
-    EMBEDDING = "Embedding"
-    FINE_TUNING = "Fine-tuning"
+    DEVELOPMENT = "개발"
+    PRODUCTION = "프로덕션"
+    TEST = "테스트"
+    EXPERIMENTAL = "실험"
 
 
 class SessionBase(BaseModel):
-    session_type: str  # Changed from SessionType enum
-    status: str  # Changed from SessionStatus enum
+    session_type: SessionType
+    status: SessionStatus
     user_id: str = Field(..., max_length=50)
     project_id: Optional[str] = Field(None, max_length=50)
 
@@ -32,7 +32,7 @@ class SessionCreate(SessionBase):
 
 class SessionUpdate(BaseModel):
     end_time: Optional[datetime] = None
-    status: Optional[str] = None
+    status: Optional[SessionStatus] = None
 
 
 class SessionResponse(SessionBase):
