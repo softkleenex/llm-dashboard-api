@@ -49,6 +49,8 @@ class ModelService:
     @staticmethod
     def create(model: ModelCreate) -> ModelResponse:
         """모델 추가"""
+        import uuid
+        model_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -56,13 +58,13 @@ class ModelService:
                 VALUES (:1, :2, :3)
             """,
                 [
-                    model.model_id,
+                    model_id,
                     model.model_name,
                     model.model_type,
                 ],
             )
             return ModelResponse(
-                model_id=model.model_id,
+                model_id=model_id,
                 model_name=model.model_name,
                 model_type=model.model_type,
             )

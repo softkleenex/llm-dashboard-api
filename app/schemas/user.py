@@ -38,7 +38,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    user_id: str = Field(..., max_length=50)
+    pass
 
 
 class UserUpdate(BaseModel):

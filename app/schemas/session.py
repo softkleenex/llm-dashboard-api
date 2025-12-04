@@ -26,7 +26,6 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    session_id: str = Field(..., max_length=50)
     start_time: datetime
 
 

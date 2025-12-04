@@ -137,6 +137,8 @@ class UserService:
     @staticmethod
     def create(user: UserCreate) -> UserResponse:
         """사용자 추가"""
+        import uuid
+        user_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -144,7 +146,7 @@ class UserService:
                 VALUES (:1, :2, :3, :4, 'Y', :5)
             """,
                 [
-                    user.user_id,
+                    user_id,
                     user.user_name,
                     user.user_email,
                     user.role.value,
@@ -165,10 +167,10 @@ class UserService:
                         SET manager_user_id = :1
                         WHERE department_id = :2 AND manager_user_id IS NULL
                         """,
-                        [user.user_id, user.department_id],
+                        [user_id, user.department_id],
                     )
             return UserResponse(
-                user_id=user.user_id,
+                user_id=user_id,
                 user_name=user.user_name,
                 user_email=user.user_email,
                 role=user.role,

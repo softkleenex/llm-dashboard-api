@@ -180,6 +180,8 @@ class ProjectService:
     @staticmethod
     def create(project: ProjectCreate) -> ProjectResponse:
         """프로젝트 추가"""
+        import uuid
+        project_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -190,7 +192,7 @@ class ProjectService:
                 VALUES (:1, :2, :3, :4, :5)
             """,
                 [
-                    project.project_id,
+                    project_id,
                     project.project_name,
                     project.description,
                     project.creator_user_id,
@@ -199,7 +201,7 @@ class ProjectService:
             )
             # created_at은 DB 기본값 사용
             return ProjectResponse(
-                project_id=project.project_id,
+                project_id=project_id,
                 project_name=project.project_name,
                 description=project.description,
                 created_at=None,

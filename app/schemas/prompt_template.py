@@ -25,7 +25,6 @@ class PromptTemplateBase(BaseModel):
 
 
 class PromptTemplateCreate(PromptTemplateBase):
-    template_id: str = Field(..., max_length=50)
     creator_user_id: str = Field(..., max_length=50)
 
 

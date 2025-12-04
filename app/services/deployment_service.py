@@ -117,6 +117,8 @@ class DeploymentService:
     @staticmethod
     def create(deployment: DeploymentCreate) -> DeploymentResponse:
         """배포 환경 추가"""
+        import uuid
+        deployment_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -126,7 +128,7 @@ class DeploymentService:
                 VALUES (:1, :2, :3, :4, :5, :6, :7)
             """,
                 [
-                    deployment.deployment_id,
+                    deployment_id,
                     deployment.server_name,
                     deployment.gpu_count,
                     deployment.environment.value,
@@ -136,7 +138,7 @@ class DeploymentService:
                 ],
             )
             return DeploymentResponse(
-                deployment_id=deployment.deployment_id,
+                deployment_id=deployment_id,
                 server_name=deployment.server_name,
                 gpu_count=deployment.gpu_count,
                 environment=deployment.environment,

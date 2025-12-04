@@ -1,4 +1,5 @@
 from typing import List, Optional
+import uuid
 from app.db.connection import get_cursor
 from app.schemas.department import (
     DepartmentCreate,
@@ -79,16 +80,17 @@ class DepartmentService:
     @staticmethod
     def create(department: DepartmentCreate) -> DepartmentResponse:
         """부서 추가"""
+        department_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
                 INSERT INTO DEPARTMENT (department_id, department_name)
                 VALUES (:1, :2)
             """,
-                [department.department_id, department.department_name],
+                [department_id, department.department_name],
             )
             return DepartmentResponse(
-                department_id=department.department_id,
+                department_id=department_id,
                 department_name=department.department_name,
                 manager_user_id=None,
             )

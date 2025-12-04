@@ -8,7 +8,7 @@ class ModelBase(BaseModel):
 
 
 class ModelCreate(ModelBase):
-    model_id: str = Field(..., max_length=50)
+    pass
 
 
 class ModelUpdate(BaseModel):

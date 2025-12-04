@@ -13,7 +13,7 @@ class ModelConfigBase(BaseModel):
 
 
 class ModelConfigCreate(ModelConfigBase):
-    config_id: str = Field(..., max_length=50)
+    pass
 
 
 class ModelConfigUpdate(BaseModel):

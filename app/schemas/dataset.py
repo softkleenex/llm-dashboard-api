@@ -18,7 +18,7 @@ class DatasetBase(BaseModel):
 
 
 class DatasetCreate(DatasetBase):
-    dataset_id: str = Field(..., max_length=50)
+    pass
 
 
 class DatasetUpdate(BaseModel):

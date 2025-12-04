@@ -103,6 +103,8 @@ class PromptTemplateService:
     @staticmethod
     def create(template: PromptTemplateCreate) -> PromptTemplateResponse:
         """프롬프트 템플릿 추가"""
+        import uuid
+        template_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -119,7 +121,7 @@ class PromptTemplateService:
                 VALUES (:1, :2, :3, :4, :5, :6, :7, :8)
             """,
                 [
-                    template.template_id,
+                    template_id,
                     template.template_name,
                     template.prompt_s3_path,
                     template.description,
@@ -139,7 +141,7 @@ class PromptTemplateService:
             creator_name = row[0] if row else None
 
             return PromptTemplateResponse(
-                template_id=template.template_id,
+                template_id=template_id,
                 template_name=template.template_name,
                 prompt_s3_path=template.prompt_s3_path,
                 description=template.description,

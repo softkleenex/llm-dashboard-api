@@ -11,7 +11,7 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    project_id: str = Field(..., max_length=50)
+    pass
 
 
 class ProjectUpdate(BaseModel):

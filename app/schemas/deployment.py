@@ -27,7 +27,7 @@ class DeploymentBase(BaseModel):
 
 
 class DeploymentCreate(DeploymentBase):
-    deployment_id: str = Field(..., max_length=50)
+    pass
 
 
 class DeploymentUpdate(BaseModel):

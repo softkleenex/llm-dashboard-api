@@ -68,6 +68,8 @@ class DatasetService:
     @staticmethod
     def create(dataset: DatasetCreate) -> DatasetResponse:
         """데이터셋 추가"""
+        import uuid
+        dataset_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -75,7 +77,7 @@ class DatasetService:
                 VALUES (:1, :2, :3, :4)
             """,
                 [
-                    dataset.dataset_id,
+                    dataset_id,
                     dataset.learning_type.value,
                     dataset.description,
                     dataset.s3_path,
@@ -83,7 +85,7 @@ class DatasetService:
             )
             # created_at은 DB 기본값 사용
             return DatasetResponse(
-                dataset_id=dataset.dataset_id,
+                dataset_id=dataset_id,
                 learning_type=dataset.learning_type,
                 description=dataset.description,
                 s3_path=dataset.s3_path,

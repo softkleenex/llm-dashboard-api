@@ -63,6 +63,8 @@ class ModelConfigService:
     @staticmethod
     def create(config: ModelConfigCreate) -> ModelConfigResponse:
         """모델 설정 추가"""
+        import uuid
+        config_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
@@ -72,7 +74,7 @@ class ModelConfigService:
                 VALUES (:1, :2, :3, :4, :5, :6, :7)
             """,
                 [
-                    config.config_id,
+                    config_id,
                     config.config_name,
                     config.max_tokens,
                     config.temperature,
@@ -83,7 +85,7 @@ class ModelConfigService:
             )
             # created_at은 DB 기본값 사용
             return ModelConfigResponse(
-                config_id=config.config_id,
+                config_id=config_id,
                 config_name=config.config_name,
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
