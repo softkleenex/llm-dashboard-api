@@ -209,14 +209,17 @@ class SessionService:
 class SessionLogService:
     @staticmethod
     def get_by_session(session_id: str) -> List[SessionLogWithDetails]:
-        """세션 ID로 로그 조회"""
+        """세션 ID로 로그 조회 (config 정보 포함)"""
         with get_cursor() as cursor:
             cursor.execute(
                 """
                 SELECT sl.session_id, sl.log_sequence, sl.request_time,
                        sl.request_prompt_s3_path, sl.response_s3_path,
                        sl.token_used, sl.response_time, sl.config_id,
-                       sl.deployment_id, mc.config_name, d.server_name
+                       sl.deployment_id, 
+                       mc.max_tokens, mc.temperature, 
+                       mc.top_p, mc.top_k,
+                       d.server_name
                 FROM SESSION_LOGS sl
                 LEFT JOIN MODEL_CONFIG mc ON sl.config_id = mc.config_id
                 LEFT JOIN DEPLOYMENTS d ON sl.deployment_id = d.deployment_id
@@ -237,8 +240,11 @@ class SessionLogService:
                     response_time=row[6],
                     config_id=row[7],
                     deployment_id=row[8],
-                    config_name=row[9],
-                    deployment_server=row[10],
+                    config_max_tokens=row[9],
+                    config_temperature=row[10],
+                    config_top_p=row[11],
+                    config_top_k=row[12],
+                    deployment_server=row[13],
                 )
                 for row in rows
             ]

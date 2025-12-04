@@ -74,7 +74,10 @@ class SessionLogResponse(SessionLogBase):
 
 
 class SessionLogWithDetails(SessionLogResponse):
-    config_name: Optional[str] = None
+    config_max_tokens: Optional[int] = None
+    config_temperature: Optional[float] = None
+    config_top_p: Optional[float] = None
+    config_top_k: Optional[int] = None
     deployment_server: Optional[str] = None
 
 
