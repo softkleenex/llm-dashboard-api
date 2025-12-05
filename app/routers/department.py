@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Query
 from typing import List
 from app.schemas.department import (
     DepartmentCreate,
@@ -56,13 +56,46 @@ def create_department(department: DepartmentCreate):
 @router.put("/{department_id}", response_model=DepartmentResponse)
 def update_department(department_id: str, department: DepartmentUpdate):
     """부서 수정"""
-    result = DepartmentService.update(department_id, department)
-    if not result:
+    try:
+        result = DepartmentService.update(department_id, department)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Department with id '{department_id}' not found",
+            )
+        return result
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Department with id '{department_id}' not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-    return result
+
+
+@router.put("/{department_id}/manager", response_model=DepartmentResponse)
+def update_department_manager(
+    department_id: str,
+    manager_user_id: str = Query(..., description="관리자로 설정할 user_id")
+):
+    """
+    부서 관리자 설정
+    해당 user_id가 이미 다른 부서의 관리자로 설정되어 있는지 검증합니다.
+    """
+    try:
+        result = DepartmentService.update(
+            department_id,
+            DepartmentUpdate(manager_user_id=manager_user_id)
+        )
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Department with id '{department_id}' not found",
+            )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.delete("/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
