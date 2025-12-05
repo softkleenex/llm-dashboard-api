@@ -11,6 +11,7 @@ from app.schemas.deployment import (
     DeploymentByGPU,
     ModelConfigDeployment,
     EnvironmentStats,
+    DeploymentStatusCount,
 )
 from app.schemas.dataset import LearningType
 
@@ -157,14 +158,18 @@ class DeploymentService:
     def update(
         deployment_id: str, deployment: DeploymentUpdate
     ) -> Optional[DeploymentResponse]:
-        """배포 환경 수정"""
+        """
+        배포 환경 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 배포 환경을 수정하는 것을 방지
             cursor.execute(
                 """
                 SELECT server_name, gpu_count, environment, status, model_id, dataset_id
                 FROM DEPLOYMENTS
-                WHERE deployment_id = :1
+                WHERE deployment_id = :1 FOR UPDATE
             """,
                 [deployment_id],
             )
@@ -261,6 +266,33 @@ class DeploymentService:
                     gpu_count=row[1],
                     environment=DeploymentEnvironment(row[2]),
                     status=DeploymentStatus(row[3]),
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query1_deployment_status_count() -> List[DeploymentStatusCount]:
+        """
+        Q1: 배포 상태별 집계 (웹 대시보드용)
+        Phase 4 수정: 웹 대시보드에서 Donut Chart를 위해 상태별 배포 환경 비율이 필요함.
+        기존 Q1은 개별 deployment 목록을 반환하지만, 이 메서드는 상태별 집계(count)를 반환하여
+        네트워크 트래픽을 줄이고 클라이언트 연산 부담을 감소시킴.
+        """
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT status, COUNT(*) AS count
+                FROM DEPLOYMENTS
+                WHERE status IN ('활성', '오류', '유지보수')
+                GROUP BY status
+                ORDER BY status
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                DeploymentStatusCount(
+                    status=DeploymentStatus(row[0]),
+                    count=row[1],
                 )
                 for row in rows
             ]
@@ -393,12 +425,17 @@ class DeploymentService:
         environment: Optional[DeploymentEnvironment] = None,
         min_avg_gpu: Optional[float] = None,
     ) -> List[EnvironmentStats]:
-        """Q9: 환경별 평균 GPU/배포 수 (동적 필터)"""
+        """
+        Q9: 환경별 총 GPU/배포 수 (동적 필터)
+        Phase 4 수정: 웹 대시보드에서 Bar Chart를 위해 환경별 할당된 총 GPU 개수 비교가 필요함.
+        기존 AVG(D.gpu_count)를 SUM(D.gpu_count)로 변경하여 각 환경에 할당된 총 GPU 리소스를 정확히 집계.
+        이를 통해 클라이언트에서 추가 연산 없이 바로 차트 데이터로 활용 가능.
+        """
         with get_cursor() as cursor:
             sql = """
                 SELECT D.environment,
                        COUNT(DISTINCT D.deployment_id) AS deployment_count,
-                       AVG(D.gpu_count) AS avg_gpu_count,
+                       SUM(D.gpu_count) AS total_gpu_count,
                        COUNT(DISTINCT M.model_id) AS unique_models
                 FROM DEPLOYMENTS D, MODEL M
                 WHERE D.model_id = M.model_id
@@ -413,12 +450,13 @@ class DeploymentService:
 
             sql += " GROUP BY D.environment"
 
+            # Phase 3: SUM을 사용하므로 HAVING 절도 SUM 기준으로 변경
             if min_avg_gpu is not None and min_avg_gpu > 0:
-                sql += f" HAVING AVG(D.gpu_count) >= :{param_idx}"
+                sql += f" HAVING SUM(D.gpu_count) >= :{param_idx}"
                 params.append(min_avg_gpu)
                 param_idx += 1
 
-            sql += " ORDER BY avg_gpu_count DESC"
+            sql += " ORDER BY total_gpu_count DESC"
 
             cursor.execute(sql, params)
             rows = cursor.fetchall()
@@ -426,7 +464,7 @@ class DeploymentService:
                 EnvironmentStats(
                     environment=DeploymentEnvironment(row[0]),
                     deployment_count=row[1],
-                    avg_gpu_count=float(row[2]),
+                    total_gpu_count=int(row[2]),  # Phase 3: float에서 int로 변경 (SUM 결과는 정수)
                     unique_models=row[3],
                 )
                 for row in rows

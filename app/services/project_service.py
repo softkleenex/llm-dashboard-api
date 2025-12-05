@@ -211,15 +211,19 @@ class ProjectService:
 
     @staticmethod
     def update(project_id: str, project: ProjectUpdate) -> Optional[ProjectResponse]:
-        """프로젝트 수정"""
+        """
+        프로젝트 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 프로젝트를 수정하는 것을 방지
             cursor.execute(
                 """
                 SELECT project_name, description,
                        created_at, creator_user_id, department_id
                 FROM PROJECT
-                WHERE project_id = :1
+                WHERE project_id = :1 FOR UPDATE
             """,
                 [project_id],
             )

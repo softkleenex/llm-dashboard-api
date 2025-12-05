@@ -82,10 +82,16 @@ class ModelConfigDeployment(BaseModel):
     environment: DeploymentEnvironment
 
 
-# Q9: 환경별 평균 GPU/배포 수
+# Q1: 배포 상태별 집계 (웹 대시보드용)
+class DeploymentStatusCount(BaseModel):
+    status: DeploymentStatus
+    count: int
+
+
+# Q9: 환경별 총 GPU/배포 수
 class EnvironmentStats(BaseModel):
     environment: DeploymentEnvironment
     deployment_count: int
-    avg_gpu_count: float
+    total_gpu_count: int  # Phase 3: AVG에서 SUM으로 변경 (웹 대시보드에서 환경별 총 GPU 개수 비교 필요)
     unique_models: int
 

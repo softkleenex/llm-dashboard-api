@@ -9,33 +9,17 @@ settings = get_settings()
 pool = None
 
 
-# def init_pool():
-#     """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
-#     global pool
-#     if pool is None:
-#         pool = oracledb.create_pool(
-#             user=settings.db_user,
-#             password=settings.db_password,
-#             dsn=settings.dsn,
-#             config_dir=settings.wallet_location,
-#             wallet_location=settings.wallet_location,
-#             wallet_password=settings.db_wallet_password,
-#             min=2,
-#             max=10,
-#             increment=1,
-#         )
-#     return pool
 def init_pool():
-    """Initialize Oracle connection pool for local Oracle DB"""
+    """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
     global pool
     if pool is None:
-        # 로컬 Oracle DB 연결 (wallet 불필요)
-        dsn = f"{settings.db_host}:{settings.db_port}/{settings.db_service}"
-        
         pool = oracledb.create_pool(
             user=settings.db_user,
             password=settings.db_password,
-            dsn=dsn,
+            dsn=settings.dsn,
+            config_dir=settings.wallet_location,
+            wallet_location=settings.wallet_location,
+            wallet_password=settings.db_wallet_password,
             min=2,
             max=10,
             increment=1,
@@ -52,11 +36,24 @@ def close_pool():
 
 @contextmanager
 def get_connection() -> Generator[oracledb.Connection, None, None]:
-    """Get a connection from the pool"""
+    """
+    Get a connection from the pool with explicit transaction management.
+    동시성 제어: Oracle의 기본 격리 수준인 READ COMMITTED를 사용하여
+    Dirty Read를 방지하고 일관성 있는 데이터 읽기를 보장합니다.
+    
+    참고: Oracle은 READ COMMITTED(기본값)와 SERIALIZABLE만 지원합니다.
+    READ COMMITTED는 명시적으로 설정하는 SQL이 없으며 기본값으로 동작합니다.
+    """
     if pool is None:
         init_pool()
     conn = pool.acquire()
     try:
+        # 동시성 제어: 명시적 트랜잭션 관리 활성화
+        # autocommit=False로 설정하여 각 작업이 트랜잭션 내에서 수행되도록 함
+        # Oracle의 기본 격리 수준인 READ COMMITTED 사용:
+        #   - Dirty Read 방지: 커밋되지 않은 데이터는 읽을 수 없음
+        #   - Phantom Read/Non-repeatable Read는 허용 (성능과 일관성의 균형)
+        conn.autocommit = False
         yield conn
     finally:
         pool.release(conn)

@@ -102,3 +102,12 @@ class UserIdOnly(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserRoleDistribution(BaseModel):
+    """Q11: 모든 역할별 사용자 분포 (웹 대시보드용)"""
+    role: str
+    count: int
+
+    class Config:
+        from_attributes = True

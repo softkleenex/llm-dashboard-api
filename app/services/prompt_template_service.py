@@ -159,9 +159,13 @@ class PromptTemplateService:
     def update(
         template_id: str, template: PromptTemplateUpdate
     ) -> Optional[PromptTemplateResponse]:
-        """프롬프트 템플릿 수정"""
+        """
+        프롬프트 템플릿 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 템플릿을 수정하는 것을 방지
             cursor.execute(
                 """
                 SELECT template_name,
@@ -174,7 +178,7 @@ class PromptTemplateService:
                        created_at,
                        creator_user_id
                 FROM PROMPT_TEMPLATE
-                WHERE template_id = :1
+                WHERE template_id = :1 FOR UPDATE
             """,
                 [template_id],
             )

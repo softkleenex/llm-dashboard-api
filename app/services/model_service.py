@@ -78,14 +78,18 @@ class ModelService:
 
     @staticmethod
     def update(model_id: str, model: ModelUpdate) -> Optional[ModelResponse]:
-        """모델 수정"""
+        """
+        모델 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 모델을 수정하는 것을 방지
             cursor.execute(
                 """
                 SELECT model_name, model_type
                 FROM MODEL
-                WHERE model_id = :1
+                WHERE model_id = :1 FOR UPDATE
             """,
                 [model_id],
             )

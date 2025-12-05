@@ -99,14 +99,18 @@ class ModelConfigService:
     def update(
         config_id: str, config: ModelConfigUpdate
     ) -> Optional[ModelConfigResponse]:
-        """모델 설정 수정"""
+        """
+        모델 설정 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 설정을 수정하는 것을 방지
             cursor.execute(
                 """
                 SELECT config_name, max_tokens, temperature, top_p, top_k, created_at, model_id
                 FROM MODEL_CONFIG
-                WHERE config_id = :1
+                WHERE config_id = :1 FOR UPDATE
             """,
                 [config_id],
             )

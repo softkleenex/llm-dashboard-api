@@ -12,6 +12,7 @@ from app.schemas.deployment import (
     DeploymentByGPU,
     ModelConfigDeployment,
     EnvironmentStats,
+    DeploymentStatusCount,
 )
 from app.services.deployment_service import DeploymentService
 
@@ -49,6 +50,12 @@ def query1_active_production_deployments(
 ):
     """Q1: 배포 환경 조회 (동적 필터)"""
     return DeploymentService.query1_active_production_deployments(environment, status)
+
+
+@router.get("/stats/q1/status-count", response_model=List[DeploymentStatusCount])
+def query1_deployment_status_count():
+    """Q1: 배포 상태별 집계 (웹 대시보드용 - Donut Chart)"""
+    return DeploymentService.query1_deployment_status_count()
 
 
 @router.get("/stats/q2", response_model=List[ModelDatasetDeploymentMapping])

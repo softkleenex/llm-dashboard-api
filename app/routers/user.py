@@ -10,6 +10,7 @@ from app.schemas.user import (
     UserWithSessionCount,
     UserIdOnly,
     UserRole,
+    UserRoleDistribution,
 )
 from app.schemas.session import SessionStatus
 from app.services.user_service import UserService
@@ -27,6 +28,12 @@ router = APIRouter(prefix="/users", tags=["사용자 관리"])
 def get_users_by_role(role: str = Query(..., description="역할 (Admin, Developer, Data Scientist, Researcher, Team Leader)")):
     """[Q11] 특정 역할 사용자 조회"""
     return UserService.get_by_role(role)
+
+
+@router.get("/stats/role-distribution", response_model=List[UserRoleDistribution])
+def get_user_role_distribution():
+    """[Q11] 모든 역할별 사용자 분포 (웹 대시보드용 - Pie Chart)"""
+    return UserService.get_user_role_distribution()
 
 
 @router.get("/stats/by-department-name", response_model=List[UserBasic])
@@ -47,10 +54,11 @@ def get_users_with_sessions(
 
 @router.get("/stats/min-sessions", response_model=List[UserWithSessionCount])
 def get_users_with_min_sessions(
-    min_count: int = Query(5, ge=1, description="최소 세션 수 (기본값: 5)")
+    min_count: int = Query(5, ge=1, description="최소 세션 수 (기본값: 5)"),
+    limit: Optional[int] = Query(None, ge=1, description="조회 개수 제한 (웹 대시보드용 - Ranking List)"),
 ):
     """[Q17] 최소 세션 수 이상 보유 유저 조회 (인라인 뷰)"""
-    return UserService.get_users_with_min_sessions(min_count)
+    return UserService.get_users_with_min_sessions(min_count, limit)
 
 
 @router.get("/stats/role-and-managers", response_model=List[UserIdOnly])

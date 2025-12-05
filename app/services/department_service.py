@@ -97,11 +97,15 @@ class DepartmentService:
 
     @staticmethod
     def update(department_id: str, department: DepartmentUpdate) -> Optional[DepartmentResponse]:
-        """부서 수정"""
+        """
+        부서 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 부서를 수정하는 것을 방지
             cursor.execute(
-                "SELECT department_name, manager_user_id FROM DEPARTMENT WHERE department_id = :1",
+                "SELECT department_name, manager_user_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
                 [department_id],
             )
             row = cursor.fetchone()
