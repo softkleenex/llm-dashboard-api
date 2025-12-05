@@ -38,7 +38,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    user_id: str = Field(..., max_length=50)
+    pass
 
 
 class UserUpdate(BaseModel):
@@ -99,6 +99,15 @@ class UserWithSessionCount(BaseModel):
 class UserIdOnly(BaseModel):
     """Q20: 사용자 ID만"""
     user_id: str
+
+    class Config:
+        from_attributes = True
+
+
+class UserRoleDistribution(BaseModel):
+    """Q11: 모든 역할별 사용자 분포 (웹 대시보드용)"""
+    role: str
+    count: int
 
     class Config:
         from_attributes = True

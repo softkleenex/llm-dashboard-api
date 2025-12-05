@@ -9,14 +9,17 @@ from app.schemas.user import (
     UserBasic,
     UserWithSessionCount,
     UserIdOnly,
+    UserRole,
+    UserRoleDistribution,
 )
+from app.schemas.session import SessionStatus
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["사용자 관리"])
 
 
 # ========================================
-# 통계/분석 쿼리 (Phase 3 Mainmenu 1, 5)
+# 통계/분석 쿼리 엔드포인트 (for Phase 3 Mapping)
 # 주의: /{user_id} 보다 먼저 정의해야 함!
 # ========================================
 
@@ -27,6 +30,12 @@ def get_users_by_role(role: str = Query(..., description="역할 (Admin, Develop
     return UserService.get_by_role(role)
 
 
+@router.get("/stats/role-distribution", response_model=List[UserRoleDistribution])
+def get_user_role_distribution():
+    """[Q11] 모든 역할별 사용자 분포 (웹 대시보드용 - Pie Chart)"""
+    return UserService.get_user_role_distribution()
+
+
 @router.get("/stats/by-department-name", response_model=List[UserBasic])
 def get_users_by_department_name(department_name: str = Query(..., description="부서명")):
     """[Q14] 특정 부서명으로 유저 조회 (서브쿼리 사용)"""
@@ -35,7 +44,9 @@ def get_users_by_department_name(department_name: str = Query(..., description="
 
 @router.get("/stats/with-sessions", response_model=List[UserBasic])
 def get_users_with_sessions(
-    session_status: Optional[str] = Query(None, description="세션 상태 (진행중, 완료, 오류, 중단)")
+    session_status: Optional[SessionStatus] = Query(
+        None, description="세션 상태 (진행중, 완료, 오류, 중단)"
+    )
 ):
     """[Q15] 특정 상태 세션을 보유한 유저 조회 (EXISTS 서브쿼리)"""
     return UserService.get_users_with_active_sessions(session_status)
@@ -43,10 +54,11 @@ def get_users_with_sessions(
 
 @router.get("/stats/min-sessions", response_model=List[UserWithSessionCount])
 def get_users_with_min_sessions(
-    min_count: int = Query(5, ge=1, description="최소 세션 수 (기본값: 5)")
+    min_count: int = Query(5, ge=1, description="최소 세션 수 (기본값: 5)"),
+    limit: Optional[int] = Query(None, ge=1, description="조회 개수 제한 (웹 대시보드용 - Ranking List)"),
 ):
     """[Q17] 최소 세션 수 이상 보유 유저 조회 (인라인 뷰)"""
-    return UserService.get_users_with_min_sessions(min_count)
+    return UserService.get_users_with_min_sessions(min_count, limit)
 
 
 @router.get("/stats/role-and-managers", response_model=List[UserIdOnly])
@@ -63,10 +75,14 @@ def get_role_users_and_managers(
 
 
 @router.get("/", response_model=List[UserWithDepartment])
-def get_all_users():
-    """모든 사용자 조회"""
+def get_all_users(
+    user_name: Optional[str] = Query(None, description="유저 이름 (정확히 일치)"),
+    role: Optional[UserRole] = Query(None, description="역할 필터"),
+):
+    """모든 사용자 조회 (유저 이름 및 역할 필터링 가능)"""
     try:
-        return UserService.get_all()
+        role_str = role.value if role else None
+        return UserService.get_all(user_name, role_str)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -74,9 +90,14 @@ def get_all_users():
 
 
 @router.get("/department/{department_id}", response_model=List[UserWithDepartment])
-def get_users_by_department(department_id: str):
-    """부서별 사용자 목록 조회"""
-    return UserService.get_by_department(department_id)
+def get_users_by_department(
+    department_id: str,
+    user_name: Optional[str] = Query(None, description="유저 이름 (정확히 일치)"),
+    role: Optional[UserRole] = Query(None, description="역할 필터"),
+):
+    """부서별 사용자 목록 조회 (유저 이름 및 역할 필터링 가능)"""
+    role_str = role.value if role else None
+    return UserService.get_by_department(department_id, user_name, role_str)
 
 
 @router.get("/{user_id}", response_model=UserWithDepartment)

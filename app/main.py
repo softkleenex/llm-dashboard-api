@@ -4,7 +4,17 @@ from contextlib import asynccontextmanager
 
 from app.config import get_settings
 from app.db.connection import init_pool, close_pool, test_connection
-from app.routers import department, user, session
+from app.routers import (
+    department,
+    user,
+    session,
+    project,
+    prompt_template,
+    model,
+    model_config,
+    dataset,
+    deployment,
+)
 
 settings = get_settings()
 
@@ -44,6 +54,12 @@ app.add_middleware(
 app.include_router(department.router, prefix="/api/v1")
 app.include_router(user.router, prefix="/api/v1")
 app.include_router(session.router, prefix="/api/v1")
+app.include_router(project.router, prefix="/api/v1")
+app.include_router(prompt_template.router, prefix="/api/v1")
+app.include_router(model.router, prefix="/api/v1")
+app.include_router(model_config.router, prefix="/api/v1")
+app.include_router(dataset.router, prefix="/api/v1")
+app.include_router(deployment.router, prefix="/api/v1")
 
 
 @app.get("/")

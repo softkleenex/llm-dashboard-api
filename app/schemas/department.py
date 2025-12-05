@@ -7,7 +7,7 @@ class DepartmentBase(BaseModel):
 
 
 class DepartmentCreate(DepartmentBase):
-    department_id: str = Field(..., max_length=50)
+    pass
 
 
 class DepartmentUpdate(BaseModel):

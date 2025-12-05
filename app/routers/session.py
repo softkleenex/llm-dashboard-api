@@ -5,6 +5,8 @@ from app.schemas.session import (
     SessionLogWithDetails,
     SessionLogByToken,
     UserSessionCount,
+    SessionType,
+    SessionStatus,
 )
 from app.services.session_service import SessionService, SessionLogService
 
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/sessions", tags=["세션 및 로그 관리"])
 
 
 # ========================================
-# 통계/분석 쿼리 (Phase 3 Mainmenu 5)
+# 통계/분석 쿼리 엔드포인트 (for Phase 3 Mapping)
 # 주의: /{session_id} 보다 먼저 정의해야 함!
 # ========================================
 
@@ -45,6 +47,25 @@ def get_user_session_count(
 def get_all_sessions():
     """모든 세션 조회"""
     return SessionService.get_all()
+
+
+@router.get("/search", response_model=List[SessionWithUser])
+def search_sessions(
+    user_name: Optional[str] = Query(
+        None, description="사용자명 (부분 일치, 대소문자 무시)"
+    ),
+    project_name: Optional[str] = Query(
+        None, description="프로젝트명 (부분 일치, 대소문자 무시)"
+    ),
+    session_type: Optional[SessionType] = Query(
+        None, description="세션 타입 (개발, 프로덕션, 테스트, 실험)"
+    ),
+    status: Optional[SessionStatus] = Query(
+        None, description="세션 상태 (진행중, 완료, 오류, 중단)"
+    ),
+):
+    """세션 검색: 사용자명, 프로젝트명, 타입, 상태로 필터링"""
+    return SessionService.search(user_name, project_name, session_type, status)
 
 
 @router.get("/user/{user_id}", response_model=List[SessionWithUser])

@@ -12,27 +12,26 @@ class SessionStatus(str, Enum):
 
 
 class SessionType(str, Enum):
-    CHAT = "Chat"
-    COMPLETION = "Completion"
-    EMBEDDING = "Embedding"
-    FINE_TUNING = "Fine-tuning"
+    DEVELOPMENT = "개발"
+    PRODUCTION = "프로덕션"
+    TEST = "테스트"
+    EXPERIMENTAL = "실험"
 
 
 class SessionBase(BaseModel):
-    session_type: str  # Changed from SessionType enum
-    status: str  # Changed from SessionStatus enum
+    session_type: SessionType
+    status: SessionStatus
     user_id: str = Field(..., max_length=50)
     project_id: Optional[str] = Field(None, max_length=50)
 
 
 class SessionCreate(SessionBase):
-    session_id: str = Field(..., max_length=50)
     start_time: datetime
 
 
 class SessionUpdate(BaseModel):
     end_time: Optional[datetime] = None
-    status: Optional[str] = None
+    status: Optional[SessionStatus] = None
 
 
 class SessionResponse(SessionBase):
@@ -74,7 +73,10 @@ class SessionLogResponse(SessionLogBase):
 
 
 class SessionLogWithDetails(SessionLogResponse):
-    config_name: Optional[str] = None
+    config_max_tokens: Optional[int] = None
+    config_temperature: Optional[float] = None
+    config_top_p: Optional[float] = None
+    config_top_k: Optional[int] = None
     deployment_server: Optional[str] = None
 
 

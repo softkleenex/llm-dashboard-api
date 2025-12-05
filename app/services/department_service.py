@@ -1,4 +1,5 @@
 from typing import List, Optional
+import uuid
 from app.db.connection import get_cursor
 from app.schemas.department import (
     DepartmentCreate,
@@ -79,27 +80,32 @@ class DepartmentService:
     @staticmethod
     def create(department: DepartmentCreate) -> DepartmentResponse:
         """부서 추가"""
+        department_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(
                 """
                 INSERT INTO DEPARTMENT (department_id, department_name)
                 VALUES (:1, :2)
             """,
-                [department.department_id, department.department_name],
+                [department_id, department.department_name],
             )
             return DepartmentResponse(
-                department_id=department.department_id,
+                department_id=department_id,
                 department_name=department.department_name,
                 manager_user_id=None,
             )
 
     @staticmethod
     def update(department_id: str, department: DepartmentUpdate) -> Optional[DepartmentResponse]:
-        """부서 수정"""
+        """
+        부서 수정
+        동시성 제어: SELECT FOR UPDATE를 사용하여 Lost Update 문제를 방지합니다.
+        """
         with get_cursor() as cursor:
-            # 현재 데이터 조회
+            # 동시성 제어: SELECT FOR UPDATE로 행 레벨 잠금 획득
+            # 다른 트랜잭션이 동시에 같은 부서를 수정하는 것을 방지
             cursor.execute(
-                "SELECT department_name, manager_user_id FROM DEPARTMENT WHERE department_id = :1",
+                "SELECT department_name, manager_user_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
                 [department_id],
             )
             row = cursor.fetchone()
@@ -107,7 +113,11 @@ class DepartmentService:
                 return None
 
             new_name = department.department_name if department.department_name else row[0]
-            new_manager = department.manager_user_id if department.manager_user_id is not None else row[1]
+            # manager_user_id가 요청에 없거나 빈 문자열이면 기존 값 유지
+            if department.manager_user_id in (None, ""):
+                new_manager = row[1]
+            else:
+                new_manager = department.manager_user_id
 
             cursor.execute(
                 """
