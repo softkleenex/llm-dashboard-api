@@ -33,3 +33,11 @@ class DatasetResponse(DatasetBase):
 
     class Config:
         from_attributes = True
+
+
+# Q5: 배포에 사용된 데이터셋
+class DatasetUsedInDeployment(BaseModel):
+    dataset_id: str
+    learning_type: LearningType
+    description: Optional[str] = None
+    created_at: Optional[datetime] = None

@@ -1,7 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 
-from app.schemas.dataset import DatasetCreate, DatasetUpdate, DatasetResponse, LearningType
+from app.schemas.dataset import (
+    DatasetCreate,
+    DatasetUpdate,
+    DatasetResponse,
+    LearningType,
+    DatasetUsedInDeployment,
+)
 from app.services.dataset_service import DatasetService
 
 router = APIRouter(prefix="/datasets", tags=["데이터셋 관리"])
@@ -25,6 +31,18 @@ def search_datasets(
 ):
     """데이터셋 검색: dataset_id(이름) 및 learning_type으로 필터링"""
     return DatasetService.search(dataset_name, learning_type)
+
+
+# ==========================
+# 통계/분석 쿼리 엔드포인트 (for Phase 3 Mapping)
+# 주의: /{dataset_id} 보다 먼저 정의해야 함!
+# ==========================
+
+
+@router.get("/stats/q5", response_model=List[DatasetUsedInDeployment])
+def query5_datasets_used_in_deployments():
+    """Q5: 배포에 사용된 데이터셋"""
+    return DatasetService.query5_datasets_used_in_deployments()
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)

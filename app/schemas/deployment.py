@@ -44,3 +44,48 @@ class DeploymentResponse(DeploymentBase):
     class Config:
         from_attributes = True
 
+
+# Q1: 배포 환경 조회 (동적 필터)
+class DeploymentBasic(BaseModel):
+    server_name: str
+    gpu_count: int
+    environment: DeploymentEnvironment
+    status: DeploymentStatus
+
+
+# Q2: 모델-데이터셋-배포 매핑
+class ModelDatasetDeploymentMapping(BaseModel):
+    model_name: str
+    model_type: str
+    server_name: str
+    environment: DeploymentEnvironment
+    dataset_learning_type: str
+    dataset_path: Optional[str] = None
+
+
+# Q4: GPU 수 기준 배포 조회
+class DeploymentByGPU(BaseModel):
+    deployment_id: str
+    server_name: str
+    gpu_count: int
+    environment: DeploymentEnvironment
+
+
+# Q8: 모델-설정-배포 관계
+class ModelConfigDeployment(BaseModel):
+    model_name: str
+    config_name: str
+    max_tokens: int
+    temperature: float
+    server_name: str
+    gpu_count: int
+    environment: DeploymentEnvironment
+
+
+# Q9: 환경별 평균 GPU/배포 수
+class EnvironmentStats(BaseModel):
+    environment: DeploymentEnvironment
+    deployment_count: int
+    avg_gpu_count: float
+    unique_models: int
+

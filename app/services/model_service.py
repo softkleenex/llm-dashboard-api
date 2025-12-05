@@ -1,6 +1,13 @@
 from typing import List, Optional
 from app.db.connection import get_cursor
-from app.schemas.model import ModelCreate, ModelUpdate, ModelResponse
+from app.schemas.model import (
+    ModelCreate,
+    ModelUpdate,
+    ModelResponse,
+    ModelConfigDeploymentCount,
+    ModelAvgTemperatureStats,
+    UndeployedModel,
+)
 
 
 class ModelService:
@@ -112,4 +119,97 @@ class ModelService:
         with get_cursor() as cursor:
             cursor.execute("DELETE FROM MODEL WHERE model_id = :1", [model_id])
             return cursor.rowcount > 0
+
+    # ==========================
+    # 통계/분석 쿼리 (for Phase 3 Mapping)
+    # ==========================
+
+    @staticmethod
+    def query3_model_config_and_deployment_count() -> List[ModelConfigDeploymentCount]:
+        """Q3: 모델 설정 및 배포 수"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT M.model_name,
+                       M.model_type,
+                       COUNT(DISTINCT MC.config_id) AS config_count,
+                       COUNT(DISTINCT D.deployment_id) AS deployment_count
+                FROM MODEL M, MODEL_CONFIG MC, DEPLOYMENTS D
+                WHERE M.model_id = MC.model_id
+                  AND M.model_id = D.model_id
+                GROUP BY M.model_name, M.model_type
+                ORDER BY M.model_name
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                ModelConfigDeploymentCount(
+                    model_name=row[0],
+                    model_type=row[1],
+                    config_count=row[2],
+                    deployment_count=row[3],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query7_model_avg_temperature_and_deployment_count() -> List[ModelAvgTemperatureStats]:
+        """Q7: 모델 평균 Temperature 및 배포 수"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT M.model_name,
+                       AVG_CONFIG.avg_temperature,
+                       AVG_CONFIG.config_count,
+                       DEPLOY_COUNT.deployment_count
+                FROM MODEL M,
+                     (SELECT model_id,
+                             AVG(temperature) AS avg_temperature,
+                             COUNT(*) AS config_count
+                      FROM MODEL_CONFIG
+                      GROUP BY model_id) AVG_CONFIG,
+                     (SELECT model_id,
+                             COUNT(*) AS deployment_count
+                      FROM DEPLOYMENTS
+                      GROUP BY model_id) DEPLOY_COUNT
+                WHERE M.model_id = AVG_CONFIG.model_id
+                  AND M.model_id = DEPLOY_COUNT.model_id
+                ORDER BY M.model_name
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                ModelAvgTemperatureStats(
+                    model_name=row[0],
+                    avg_temperature=float(row[1]),
+                    config_count=row[2],
+                    deployment_count=row[3],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query10_undeployed_models() -> List[UndeployedModel]:
+        """Q10: 배포되지 않은 모델"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT model_id, model_name, model_type
+                FROM MODEL
+                MINUS
+                SELECT M.model_id, M.model_name, M.model_type
+                FROM MODEL M, DEPLOYMENTS D
+                WHERE M.model_id = D.model_id
+                ORDER BY model_id
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                UndeployedModel(
+                    model_id=row[0],
+                    model_name=row[1],
+                    model_type=row[2],
+                )
+                for row in rows
+            ]
 

@@ -1,7 +1,14 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 
-from app.schemas.model import ModelCreate, ModelUpdate, ModelResponse
+from app.schemas.model import (
+    ModelCreate,
+    ModelUpdate,
+    ModelResponse,
+    ModelConfigDeploymentCount,
+    ModelAvgTemperatureStats,
+    UndeployedModel,
+)
 from app.services.model_service import ModelService
 
 router = APIRouter(prefix="/models", tags=["모델 관리"])
@@ -11,6 +18,30 @@ router = APIRouter(prefix="/models", tags=["모델 관리"])
 def get_all_models():
     """모든 모델 조회"""
     return ModelService.get_all()
+
+
+# ==========================
+# 통계/분석 쿼리 엔드포인트 (for Phase 3 Mapping)
+# 주의: /{model_id} 보다 먼저 정의해야 함!
+# ==========================
+
+
+@router.get("/stats/q3", response_model=List[ModelConfigDeploymentCount])
+def query3_model_config_and_deployment_count():
+    """Q3: 모델 설정 및 배포 수"""
+    return ModelService.query3_model_config_and_deployment_count()
+
+
+@router.get("/stats/q7", response_model=List[ModelAvgTemperatureStats])
+def query7_model_avg_temperature_and_deployment_count():
+    """Q7: 모델 평균 Temperature 및 배포 수"""
+    return ModelService.query7_model_avg_temperature_and_deployment_count()
+
+
+@router.get("/stats/q10", response_model=List[UndeployedModel])
+def query10_undeployed_models():
+    """Q10: 배포되지 않은 모델"""
+    return ModelService.query10_undeployed_models()
 
 
 @router.get("/{model_id}", response_model=ModelResponse)

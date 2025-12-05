@@ -6,7 +6,13 @@ from app.schemas.deployment import (
     DeploymentResponse,
     DeploymentEnvironment,
     DeploymentStatus,
+    DeploymentBasic,
+    ModelDatasetDeploymentMapping,
+    DeploymentByGPU,
+    ModelConfigDeployment,
+    EnvironmentStats,
 )
+from app.schemas.dataset import LearningType
 
 
 class DeploymentService:
@@ -217,4 +223,212 @@ class DeploymentService:
                 "DELETE FROM DEPLOYMENTS WHERE deployment_id = :1", [deployment_id]
             )
             return cursor.rowcount > 0
+
+    # ==========================
+    # 통계/분석 쿼리 (for Phase 3 Mapping)
+    # ==========================
+
+    @staticmethod
+    def query1_active_production_deployments(
+        environment: Optional[DeploymentEnvironment] = None,
+        status: Optional[DeploymentStatus] = None,
+    ) -> List[DeploymentBasic]:
+        """Q1: 배포 환경 조회 (동적 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT server_name, gpu_count, environment, status
+                FROM DEPLOYMENTS
+                WHERE 1=1
+            """
+            params: list = []
+            param_idx = 1
+
+            if environment:
+                sql += f" AND environment = :{param_idx}"
+                params.append(environment.value)
+                param_idx += 1
+
+            if status:
+                sql += f" AND status = :{param_idx}"
+                params.append(status.value)
+                param_idx += 1
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                DeploymentBasic(
+                    server_name=row[0],
+                    gpu_count=row[1],
+                    environment=DeploymentEnvironment(row[2]),
+                    status=DeploymentStatus(row[3]),
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query2_model_dataset_deployment_mapping() -> List[ModelDatasetDeploymentMapping]:
+        """Q2: 모델-데이터셋-배포 매핑"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT M.model_name AS model_name,
+                       M.model_type AS model_type,
+                       D.server_name AS server_name,
+                       D.environment AS environment,
+                       DS.learning_type AS dataset_learning_type,
+                       DS.s3_path AS dataset_path
+                FROM MODEL M, DEPLOYMENTS D, DATASET DS
+                WHERE M.model_id = D.model_id
+                  AND D.dataset_id = DS.dataset_id
+                ORDER BY M.model_name, D.server_name
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                ModelDatasetDeploymentMapping(
+                    model_name=row[0],
+                    model_type=row[1],
+                    server_name=row[2],
+                    environment=DeploymentEnvironment(row[3]),
+                    dataset_learning_type=row[4],
+                    dataset_path=row[5],
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query4_deployments_above_avg_gpu(
+        min_gpu_count: Optional[int] = None,
+        use_average: Optional[bool] = None,
+    ) -> List[DeploymentByGPU]:
+        """Q4: GPU 수 기준 배포 조회 (동적 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT deployment_id, server_name, gpu_count, environment
+                FROM DEPLOYMENTS
+                WHERE 1=1
+            """
+            params: list = []
+            param_idx = 1
+
+            if use_average:
+                # 평균보다 많은 경우
+                sql += " AND gpu_count > (SELECT AVG(gpu_count) FROM DEPLOYMENTS)"
+            elif min_gpu_count is not None and min_gpu_count > 0:
+                # 최소 GPU 수 지정
+                sql += f" AND gpu_count >= :{param_idx}"
+                params.append(min_gpu_count)
+                param_idx += 1
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                DeploymentByGPU(
+                    deployment_id=row[0],
+                    server_name=row[1],
+                    gpu_count=row[2],
+                    environment=DeploymentEnvironment(row[3]),
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query8_model_config_deployment_by_gpu(
+        order_by: Optional[str] = None,
+        order_dir: Optional[str] = None,
+    ) -> List[ModelConfigDeployment]:
+        """Q8: 모델-설정-배포 관계 (동적 정렬)"""
+        with get_cursor() as cursor:
+            # 화이트리스트로 안전한 컬럼만 허용 및 테이블 매핑
+            column_mapping = {
+                "gpu_count": "D.gpu_count",
+                "temperature": "MC.temperature",
+                "max_tokens": "MC.max_tokens",
+                "model_name": "M.model_name",
+            }
+            safe_order_by = "D.gpu_count"  # 기본값
+
+            if order_by:
+                for col, table_col in column_mapping.items():
+                    if col.lower() == order_by.lower():
+                        safe_order_by = table_col
+                        break
+
+            safe_order_dir = "DESC"
+            if order_dir and order_dir.upper() == "ASC":
+                safe_order_dir = "ASC"
+
+            # ORDER BY는 파라미터 바인딩 불가능하므로 문자열 연결 사용
+            sql = f"""
+                SELECT M.model_name,
+                       MC.config_name,
+                       MC.max_tokens,
+                       MC.temperature,
+                       D.server_name,
+                       D.gpu_count,
+                       D.environment
+                FROM MODEL M, MODEL_CONFIG MC, DEPLOYMENTS D
+                WHERE M.model_id = MC.model_id
+                  AND M.model_id = D.model_id
+                ORDER BY {safe_order_by} {safe_order_dir}, M.model_name ASC
+            """
+
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            return [
+                ModelConfigDeployment(
+                    model_name=row[0],
+                    config_name=row[1],
+                    max_tokens=row[2],
+                    temperature=row[3],
+                    server_name=row[4],
+                    gpu_count=row[5],
+                    environment=DeploymentEnvironment(row[6]),
+                )
+                for row in rows
+            ]
+
+    @staticmethod
+    def query9_environment_avg_gpu_and_deployment_count(
+        environment: Optional[DeploymentEnvironment] = None,
+        min_avg_gpu: Optional[float] = None,
+    ) -> List[EnvironmentStats]:
+        """Q9: 환경별 평균 GPU/배포 수 (동적 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT D.environment,
+                       COUNT(DISTINCT D.deployment_id) AS deployment_count,
+                       AVG(D.gpu_count) AS avg_gpu_count,
+                       COUNT(DISTINCT M.model_id) AS unique_models
+                FROM DEPLOYMENTS D, MODEL M
+                WHERE D.model_id = M.model_id
+            """
+            params: list = []
+            param_idx = 1
+
+            if environment:
+                sql += f" AND D.environment = :{param_idx}"
+                params.append(environment.value)
+                param_idx += 1
+
+            sql += " GROUP BY D.environment"
+
+            if min_avg_gpu is not None and min_avg_gpu > 0:
+                sql += f" HAVING AVG(D.gpu_count) >= :{param_idx}"
+                params.append(min_avg_gpu)
+                param_idx += 1
+
+            sql += " ORDER BY avg_gpu_count DESC"
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                EnvironmentStats(
+                    environment=DeploymentEnvironment(row[0]),
+                    deployment_count=row[1],
+                    avg_gpu_count=float(row[2]),
+                    unique_models=row[3],
+                )
+                for row in rows
+            ]
 

@@ -5,6 +5,8 @@ from app.schemas.prompt_template import (
     PromptTemplateCreate,
     PromptTemplateUpdate,
     PromptTemplateResponse,
+    TaskCategory,
+    PromptTemplateByCategory,
 )
 from app.services.prompt_template_service import PromptTemplateService
 
@@ -29,6 +31,20 @@ def search_prompt_templates(
 ):
     """프롬프트 템플릿 검색: 템플릿명, 생성자명으로 필터링"""
     return PromptTemplateService.search(template_name, creator_user_name)
+
+
+# ==========================
+# 통계/분석 쿼리 엔드포인트 (for Phase 3 Mapping)
+# 주의: /{template_id} 보다 먼저 정의해야 함!
+# ==========================
+
+
+@router.get("/stats/q6", response_model=List[PromptTemplateByCategory])
+def query6_prompt_templates_by_category(
+    categories: Optional[List[TaskCategory]] = Query(None, description="작업 카테고리 필터 (리스트)"),
+):
+    """Q6: 프롬프트 템플릿 카테고리 조회 (동적 필터)"""
+    return PromptTemplateService.query6_prompt_templates_by_category(categories)
 
 
 @router.get("/{template_id}", response_model=PromptTemplateResponse)

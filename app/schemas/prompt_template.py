@@ -48,3 +48,11 @@ class PromptTemplateResponse(PromptTemplateBase):
         from_attributes = True
 
 
+# Q6: 프롬프트 템플릿 카테고리 조회
+class PromptTemplateByCategory(BaseModel):
+    template_name: str
+    task_category: TaskCategory
+    version: str
+    usage_count: int
+
+

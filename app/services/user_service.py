@@ -245,7 +245,7 @@ class UserService:
             return cursor.rowcount > 0
 
     # ========================================
-    # 통계/분석 쿼리 (Phase 3 Mainmenu 1)
+    # 통계/분석 쿼리 (for Phase 3 Mapping)
     # ========================================
 
     @staticmethod

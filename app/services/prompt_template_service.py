@@ -6,6 +6,7 @@ from app.schemas.prompt_template import (
     PromptTemplateUpdate,
     PromptTemplateResponse,
     TaskCategory,
+    PromptTemplateByCategory,
 )
 
 
@@ -323,6 +324,44 @@ class PromptTemplateService:
                     created_at=row[8],
                     creator_user_id=row[9],
                     creator_user_name=row[10],
+                )
+                for row in rows
+            ]
+
+    # ==========================
+    # 통계/분석 쿼리 (for Phase 3 Mapping)
+    # ==========================
+
+    @staticmethod
+    def query6_prompt_templates_by_category(
+        categories: Optional[List[TaskCategory]] = None,
+    ) -> List[PromptTemplateByCategory]:
+        """Q6: 프롬프트 템플릿 카테고리 조회 (동적 필터)"""
+        with get_cursor() as cursor:
+            sql = """
+                SELECT template_name, task_category, version, usage_count
+                FROM PROMPT_TEMPLATE
+                WHERE 1=1
+            """
+            params: list = []
+            param_idx = 1
+
+            if categories and len(categories) > 0:
+                placeholders = ", ".join([f":{param_idx + i}" for i in range(len(categories))])
+                sql += f" AND task_category IN ({placeholders})"
+                params.extend([cat.value for cat in categories])
+                param_idx += len(categories)
+
+            sql += " ORDER BY usage_count DESC"
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [
+                PromptTemplateByCategory(
+                    template_name=row[0],
+                    task_category=TaskCategory(row[1]),
+                    version=row[2],
+                    usage_count=row[3],
                 )
                 for row in rows
             ]

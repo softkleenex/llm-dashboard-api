@@ -5,6 +5,7 @@ from app.schemas.dataset import (
     DatasetUpdate,
     DatasetResponse,
     LearningType,
+    DatasetUsedInDeployment,
 )
 
 
@@ -183,6 +184,36 @@ class DatasetService:
                     description=DatasetService._read_lob(row[2]),
                     s3_path=row[3],
                     created_at=row[4],
+                )
+                for row in rows
+            ]
+
+    # ==========================
+    # 통계/분석 쿼리 (for Phase 3 Mapping)
+    # ==========================
+
+    @staticmethod
+    def query5_datasets_used_in_deployments() -> List[DatasetUsedInDeployment]:
+        """Q5: 배포에 사용된 데이터셋"""
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT dataset_id, learning_type, description, created_at
+                FROM DATASET DS
+                WHERE EXISTS (
+                    SELECT 1 FROM DEPLOYMENTS D
+                    WHERE D.dataset_id = DS.dataset_id
+                )
+                ORDER BY dataset_id
+            """
+            )
+            rows = cursor.fetchall()
+            return [
+                DatasetUsedInDeployment(
+                    dataset_id=row[0],
+                    learning_type=LearningType(row[1]),
+                    description=DatasetService._read_lob(row[2]),
+                    created_at=row[3],
                 )
                 for row in rows
             ]
