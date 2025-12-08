@@ -115,15 +115,15 @@ class DepartmentService:
                 return None
 
             new_name = department.department_name if department.department_name else row[0]
-            
+            current_manager = row[1]
+
             # manager_user_id가 요청에 없거나 빈 문자열이면 기존 값 유지
             if department.manager_user_id in (None, ""):
-                new_manager = row[1]
+                new_manager = current_manager
             else:
                 new_manager = department.manager_user_id
-                
+
                 # 동시성 제어: 관리자 설정 시 USER 행을 잠금하여 검증 및 업데이트를 원자적으로 수행
-                # 해당 user_id가 이미 다른 부서의 관리자로 설정되어 있는지 확인
                 cursor.execute(
                     """
                     SELECT user_id, role, department_id FROM "USER" WHERE user_id = :1 FOR UPDATE
@@ -133,7 +133,7 @@ class DepartmentService:
                 user_row = cursor.fetchone()
                 if not user_row:
                     raise ValueError(f"User with id '{new_manager}' not found")
-                
+
                 # 해당 user_id가 이미 다른 부서의 manager_user_id로 설정되어 있는지 확인
                 cursor.execute(
                     """
@@ -147,9 +147,8 @@ class DepartmentService:
                     raise ValueError(
                         f"User '{new_manager}' is already a manager of another department (department_id: {existing_dept[0]})"
                     )
-                
-                # 동시성 제어: USER 행을 이미 잠금한 상태에서 업데이트하므로 안전
-                # 관리자로 설정할 때 해당 user의 부서 소속을 해당 부서로 변경하고 역할을 TEAM_LEADER로 변경
+
+                # 관리자로 설정할 때 해당 user의 부서 소속을 현재 부서로 변경하고 역할을 TEAM_LEADER로 변경
                 cursor.execute(
                     """
                     UPDATE "USER"

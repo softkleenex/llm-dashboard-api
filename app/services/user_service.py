@@ -1,4 +1,5 @@
 from typing import List, Optional
+from oracledb import IntegrityError
 from app.db.connection import get_cursor
 from app.schemas.user import (
     UserCreate,
@@ -154,24 +155,23 @@ class UserService:
                     user.department_id,
                 ],
             )
-            # 동시성 제어: 조건부 UPDATE에서 Race Condition 방지
-            # 새로 생성된 사용자가 TEAM_LEADER이면, 해당 부서에 매니저가 없을 때만 매니저로 설정
-            # SELECT FOR UPDATE로 DEPARTMENT 행을 잠금하여 동시에 두 명이 manager가 되는 것을 방지
+            # TeamLeader → 부서장 단일성 보장
             if user.role == UserRole.TEAM_LEADER and user.department_id:
                 cursor.execute(
                     "SELECT manager_user_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
                     [user.department_id],
                 )
                 dept_row = cursor.fetchone()
-                if dept_row and dept_row[0] is None:
-                    cursor.execute(
-                        """
-                        UPDATE DEPARTMENT
-                        SET manager_user_id = :1
-                        WHERE department_id = :2 AND manager_user_id IS NULL
-                        """,
-                        [user_id, user.department_id],
-                    )
+                if dept_row and dept_row[0] not in (None, user_id):
+                    raise ValueError("이미 다른 관리자가 지정된 부서입니다. 먼저 해제하세요.")
+                cursor.execute(
+                    """
+                    UPDATE DEPARTMENT
+                    SET manager_user_id = :1
+                    WHERE department_id = :2
+                    """,
+                    [user_id, user.department_id],
+                )
             return UserResponse(
                 user_id=user_id,
                 user_name=user.user_name,
@@ -207,6 +207,49 @@ class UserService:
             new_role = user.role.value if user.role else row[2]
             new_active = user.is_active if user.is_active else row[3]
             new_dept = user.department_id if user.department_id else row[5]
+            old_role = row[2]
+            old_dept = row[5]
+
+            # TeamLeader 로직: 단일성 및 부서장 연동
+            if new_role == UserRole.TEAM_LEADER.value and new_dept:
+                # 새 부서의 매니저 잠금 및 단일성 검증
+                cursor.execute(
+                    "SELECT manager_user_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
+                    [new_dept],
+                )
+                dept_row = cursor.fetchone()
+                if dept_row and dept_row[0] not in (None, user_id):
+                    raise ValueError("이미 다른 관리자가 있는 부서입니다. 먼저 해제해야 합니다.")
+                # 이전 부서에서 매니저였다면 해제
+                if old_dept and old_dept != new_dept:
+                    cursor.execute(
+                        """
+                        UPDATE DEPARTMENT
+                        SET manager_user_id = NULL
+                        WHERE department_id = :1 AND manager_user_id = :2
+                        """,
+                        [old_dept, user_id],
+                    )
+                # 새 부서 매니저로 설정
+                cursor.execute(
+                    """
+                    UPDATE DEPARTMENT
+                    SET manager_user_id = :1
+                    WHERE department_id = :2
+                    """,
+                    [user_id, new_dept],
+                )
+            else:
+                # TeamLeader 해제 혹은 부서 이동 시 매니저 해제
+                if old_role == UserRole.TEAM_LEADER.value:
+                    cursor.execute(
+                        """
+                        UPDATE DEPARTMENT
+                        SET manager_user_id = NULL
+                        WHERE manager_user_id = :1
+                        """,
+                        [user_id],
+                    )
 
             cursor.execute(
                 """
@@ -217,25 +260,6 @@ class UserService:
             """,
                 [new_name, new_email, new_role, new_active, new_dept, user_id],
             )
-
-            # 동시성 제어: 조건부 UPDATE에서 Race Condition 방지
-            # 역할이 TEAM_LEADER로 설정된 경우, 해당 부서에 매니저가 없을 때만 매니저로 설정
-            # SELECT FOR UPDATE로 DEPARTMENT 행을 잠금하여 동시에 두 명이 manager가 되는 것을 방지
-            if new_role == UserRole.TEAM_LEADER.value and new_dept:
-                cursor.execute(
-                    "SELECT manager_user_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
-                    [new_dept],
-                )
-                dept_row = cursor.fetchone()
-                if dept_row and dept_row[0] is None:
-                    cursor.execute(
-                        """
-                        UPDATE DEPARTMENT
-                        SET manager_user_id = :1
-                        WHERE department_id = :2 AND manager_user_id IS NULL
-                        """,
-                        [user_id, new_dept],
-                    )
             return UserResponse(
                 user_id=user_id,
                 user_name=new_name,
@@ -250,8 +274,12 @@ class UserService:
     def delete(user_id: str) -> bool:
         """사용자 삭제"""
         with get_cursor() as cursor:
-            cursor.execute('DELETE FROM "USER" WHERE user_id = :1', [user_id])
-            return cursor.rowcount > 0
+            try:
+                cursor.execute('DELETE FROM "USER" WHERE user_id = :1', [user_id])
+                return cursor.rowcount > 0
+            except IntegrityError as exc:
+                # 부서 매니저인 경우 등 FK 제약 위반
+                raise ValueError("해당 사용자는 부서 관리자로 지정되어 있어 삭제할 수 없습니다.") from exc
 
     # ========================================
     # 통계/분석 쿼리 (for Phase 3 Mapping)
