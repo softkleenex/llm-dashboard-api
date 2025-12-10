@@ -224,6 +224,14 @@ class DeploymentService:
     def delete(deployment_id: str) -> bool:
         """배포 환경 삭제"""
         with get_cursor() as cursor:
+            # 동시성 제어: 삭제 대상 DEPLOYMENTS 잠금으로 삭제 중 참조 생성 방지
+            cursor.execute(
+                "SELECT deployment_id FROM DEPLOYMENTS WHERE deployment_id = :1 FOR UPDATE",
+                [deployment_id],
+            )
+            if not cursor.fetchone():
+                return False
+
             cursor.execute(
                 "DELETE FROM DEPLOYMENTS WHERE deployment_id = :1", [deployment_id]
             )

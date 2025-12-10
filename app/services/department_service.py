@@ -176,6 +176,14 @@ class DepartmentService:
     def delete(department_id: str) -> bool:
         """부서 삭제"""
         with get_cursor() as cursor:
+            # 동시성 제어: 삭제 대상 DEPARTMENT 잠금으로 삭제 중 참조 생성 방지
+            cursor.execute(
+                "SELECT department_id FROM DEPARTMENT WHERE department_id = :1 FOR UPDATE",
+                [department_id],
+            )
+            if not cursor.fetchone():
+                return False
+
             cursor.execute(
                 "DELETE FROM DEPARTMENT WHERE department_id = :1",
                 [department_id],

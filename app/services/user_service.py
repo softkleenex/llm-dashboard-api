@@ -275,6 +275,13 @@ class UserService:
         """사용자 삭제"""
         with get_cursor() as cursor:
             try:
+                # 동시성 제어: 삭제 대상 USER 잠금으로 삭제 중 참조 생성 방지
+                cursor.execute(
+                    'SELECT user_id FROM "USER" WHERE user_id = :1 FOR UPDATE', [user_id]
+                )
+                if not cursor.fetchone():
+                    return False
+
                 cursor.execute('DELETE FROM "USER" WHERE user_id = :1', [user_id])
                 return cursor.rowcount > 0
             except IntegrityError as exc:

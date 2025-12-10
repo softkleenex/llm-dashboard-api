@@ -202,6 +202,14 @@ class SessionService:
     def delete(session_id: str) -> bool:
         """세션 삭제 (CASCADE로 로그도 자동 삭제)"""
         with get_cursor() as cursor:
+            # 동시성 제어: 삭제 대상 SESSIONS 잠금으로 삭제 중 로그 생성 방지
+            cursor.execute(
+                "SELECT session_id FROM SESSIONS WHERE session_id = :1 FOR UPDATE",
+                [session_id],
+            )
+            if not cursor.fetchone():
+                return False
+
             cursor.execute("DELETE FROM SESSIONS WHERE session_id = :1", [session_id])
             return cursor.rowcount > 0
 

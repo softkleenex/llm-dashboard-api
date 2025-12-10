@@ -121,6 +121,13 @@ class ModelService:
     def delete(model_id: str) -> bool:
         """모델 삭제"""
         with get_cursor() as cursor:
+            # 동시성 제어: 삭제 대상 MODEL 잠금으로 삭제 중 참조 생성 방지
+            cursor.execute(
+                "SELECT model_id FROM MODEL WHERE model_id = :1 FOR UPDATE", [model_id]
+            )
+            if not cursor.fetchone():
+                return False
+
             cursor.execute("DELETE FROM MODEL WHERE model_id = :1", [model_id])
             return cursor.rowcount > 0
 
