@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 from app.db.connection import get_cursor
 from app.schemas.deployment import (
@@ -124,7 +125,6 @@ class DeploymentService:
     @staticmethod
     def create(deployment: DeploymentCreate) -> DeploymentResponse:
         """배포 환경 추가"""
-        import uuid
         deployment_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

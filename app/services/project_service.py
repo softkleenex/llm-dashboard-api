@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 
 from app.db.connection import get_cursor
@@ -180,7 +181,6 @@ class ProjectService:
     @staticmethod
     def create(project: ProjectCreate) -> ProjectResponse:
         """프로젝트 추가"""
-        import uuid
         project_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

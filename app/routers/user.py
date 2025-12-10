@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.schemas.user import (
@@ -84,8 +85,8 @@ def get_all_users(
         role_str = role.value if role else None
         return UserService.get_all(user_name, role_str)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger = logging.getLogger(__name__)
+        logger.exception("Failed to get users")
         raise HTTPException(status_code=500, detail=str(e))
 
 

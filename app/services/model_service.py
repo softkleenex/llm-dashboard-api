@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 from app.db.connection import get_cursor
 from app.schemas.model import (
@@ -56,7 +57,6 @@ class ModelService:
     @staticmethod
     def create(model: ModelCreate) -> ModelResponse:
         """모델 추가"""
-        import uuid
         model_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

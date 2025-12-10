@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 from app.db.connection import get_cursor
 from app.schemas.dataset import (
@@ -69,7 +70,6 @@ class DatasetService:
     @staticmethod
     def create(dataset: DatasetCreate) -> DatasetResponse:
         """데이터셋 추가"""
-        import uuid
         dataset_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

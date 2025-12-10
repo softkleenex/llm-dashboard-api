@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 
 from app.db.connection import get_cursor
@@ -104,7 +105,6 @@ class PromptTemplateService:
     @staticmethod
     def create(template: PromptTemplateCreate) -> PromptTemplateResponse:
         """프롬프트 템플릿 추가"""
-        import uuid
         template_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

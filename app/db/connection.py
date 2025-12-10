@@ -1,33 +1,17 @@
 import oracledb
+import logging
 from contextlib import contextmanager
 from typing import Generator
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Connection pool
 pool = None
 
 
-# Server 연결시 사용
-# def init_pool():
-#     """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
-#     global pool
-#     if pool is None:
-#         pool = oracledb.create_pool(
-#             user=settings.db_user,
-#             password=settings.db_password,
-#             dsn=settings.dsn,
-#             config_dir=settings.wallet_location,
-#             wallet_location=settings.wallet_location,
-#             wallet_password=settings.db_wallet_password,
-#             min=2,
-#             max=10,
-#             increment=1,
-#         )
-#     return pool
 
-# Local 연결 시 사용
 def init_pool():
     """Initialize Oracle connection pool for local Oracle DB"""
     global pool
@@ -101,8 +85,5 @@ def test_connection() -> bool:
             result = cursor.fetchone()
             return result is not None and result[0] == 1
     except Exception as e:
-        import traceback
-        print(f"Database connection failed: {e}")
-        print(f"Settings - DSN: {settings.dsn}, Wallet: {settings.wallet_location}")
-        traceback.print_exc()
+        logger.error(f"Database connection failed: {e}")
         return False

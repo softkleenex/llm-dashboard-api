@@ -54,6 +54,11 @@ llm-dashboard-api/
 └── .github/workflows/         # CI/CD
 ```
 
+## 요구사항
+
+- Python 3.11+
+- Oracle Database (로컬 또는 Oracle Cloud)
+
 ## 로컬 실행
 
 ### 1. 환경 설정
@@ -123,14 +128,16 @@ uvicorn app.main:app --reload
 
 ## 환경변수
 
-| 변수명 | 설명 |
-|--------|------|
-| DB_DSN | Oracle DB DSN |
-| DB_USER | DB 사용자 |
-| DB_PASSWORD | DB 비밀번호 |
-| DB_WALLET_PASSWORD | Wallet 비밀번호 (Cloud) |
-| APP_HOST | 서버 호스트 |
-| APP_PORT | 서버 포트 |
+| 변수명 | 설명 | 기본값 |
+|--------|------|--------|
+| DB_DSN | Oracle DB DSN | - |
+| DB_USER | DB 사용자 | - |
+| DB_PASSWORD | DB 비밀번호 | - |
+| DB_WALLET_PASSWORD | Wallet 비밀번호 (Cloud) | - |
+| APP_HOST | 서버 호스트 | 0.0.0.0 |
+| APP_PORT | 서버 포트 | 8000 |
+| DEBUG | 디버그 모드 | False |
+| CORS_ORIGINS | 허용 도메인 (쉼표 구분) | localhost |
 
 ## 배포
 

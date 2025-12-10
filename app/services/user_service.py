@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Optional
 from oracledb import IntegrityError
 from app.db.connection import get_cursor
@@ -139,7 +140,6 @@ class UserService:
     @staticmethod
     def create(user: UserCreate) -> UserResponse:
         """사용자 추가"""
-        import uuid
         user_id = str(uuid.uuid4())
         with get_cursor() as cursor:
             cursor.execute(

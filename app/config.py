@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     # Application settings
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    debug: bool = True
+    debug: bool = False  # 프로덕션 환경에서는 False 유지
+
+    # CORS settings (쉼표로 구분된 도메인 목록, 환경변수로 설정)
+    cors_origins: str = "http://localhost:3000,http://localhost:8080"
 
     class Config:
         env_file = ".env"
