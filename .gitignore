@@ -53,3 +53,6 @@ htmlcov/
 
 # Oracle Instant Client
 instantclient*/
+
+# Oracle Wallet (sensitive credentials)
+wallet/
