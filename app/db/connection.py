@@ -9,17 +9,36 @@ settings = get_settings()
 pool = None
 
 
+# Server 연결시 사용
+# def init_pool():
+#     """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
+#     global pool
+#     if pool is None:
+#         pool = oracledb.create_pool(
+#             user=settings.db_user,
+#             password=settings.db_password,
+#             dsn=settings.dsn,
+#             config_dir=settings.wallet_location,
+#             wallet_location=settings.wallet_location,
+#             wallet_password=settings.db_wallet_password,
+#             min=2,
+#             max=10,
+#             increment=1,
+#         )
+#     return pool
+
+# Local 연결 시 사용
 def init_pool():
-    """Initialize Oracle connection pool for Oracle Cloud Autonomous DB"""
+    """Initialize Oracle connection pool for local Oracle DB"""
     global pool
     if pool is None:
+        # 로컬 Oracle DB 연결 (wallet 불필요)
+        dsn = f"{settings.db_host}:{settings.db_port}/{settings.db_service}"
+        
         pool = oracledb.create_pool(
             user=settings.db_user,
             password=settings.db_password,
-            dsn=settings.dsn,
-            config_dir=settings.wallet_location,
-            wallet_location=settings.wallet_location,
-            wallet_password=settings.db_wallet_password,
+            dsn=dsn,
             min=2,
             max=10,
             increment=1,
